@@ -1,0 +1,437 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-0002-4e5f-9a0b-innerdriver0002",
+		"name": "Inner Driver API (Broadcast/Auction)",
+		"description": "Postman collection for the Django REST rideshare backend — **request-centric broadcast/auction** model.\n\n### The flow\n1. **Rider** posts a *general* request (pickup lat/lng + opening price). Status `open`.\n2. **Drivers** list open requests near them (sorted nearest-first) and submit **offers**.\n3. **Rider** views offers (each with the driver's distance), then **accepts**, **counters**, or **declines** an offer.\n4. If the rider counters, the **driver re-offers** a new price (the only post-offer driver action). The **rider always closes the deal** by accepting an offer → ride becomes `assigned`, the driver's per-trip fee is charged.\n\n> Drivers cannot change an offer's status (no withdraw / accept-counter). Only the rider accepts / counters / declines.\n\n### How to use\n1. Set the `base_url` variable (default `http://127.0.0.1:8000`).\n2. Run **Auth → Login** as a rider or driver — tokens auto-save to collection variables.\n3. Use the **Driver** and **Rider** folders for the two sides of the flow. `ride_id` and `offer_id` are auto-captured where possible.\n\nSeeded accounts (password `123`): driver `galaluddinowais@gmail.com`, rider `leonilandrismessi@gmail.com`.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth & Onboarding (Public)",
+			"description": "Public endpoints — register, login, refresh, logout.",
+			"item": [
+				{
+					"name": "Register Driver",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"if (res.tokens) { pm.collectionVariables.set('access_token', res.tokens.access); pm.collectionVariables.set('refresh_token', res.tokens.refresh); }"
+						] } }
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n    \"email\": \"driver@example.com\",\n    \"password\": \"password123\",\n    \"password_confirm\": \"password123\",\n    \"full_name\": \"John Doe\",\n    \"phone_number\": \"+1234567890\",\n    \"vehicle_type_id\": {{vehicle_type_id}},\n    \"vehicle_color\": \"black\"\n}" },
+						"url": { "raw": "{{base_url}}/api/register/driver/", "host": ["{{base_url}}"], "path": ["api", "register", "driver", ""] },
+						"description": "Register a driver. Needs a valid vehicle_type_id (see Vehicle Types) + vehicle_color. Returns user + tokens."
+					}
+				},
+				{
+					"name": "Register Rider",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"if (res.tokens) { pm.collectionVariables.set('access_token', res.tokens.access); pm.collectionVariables.set('refresh_token', res.tokens.refresh); }"
+						] } }
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n    \"email\": \"rider@example.com\",\n    \"password\": \"password123\",\n    \"password_confirm\": \"password123\",\n    \"full_name\": \"Jane Smith\",\n    \"phone_number\": \"+1234567890\"\n}" },
+						"url": { "raw": "{{base_url}}/api/register/rider/", "host": ["{{base_url}}"], "path": ["api", "register", "rider", ""] },
+						"description": "Register a rider. Returns user + tokens."
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"if (res.tokens) { pm.collectionVariables.set('access_token', res.tokens.access); pm.collectionVariables.set('refresh_token', res.tokens.refresh); console.log('Tokens saved.'); }"
+						] } }
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n    \"email\": \"galaluddinowais@gmail.com\",\n    \"password\": \"123\"\n}" },
+						"url": { "raw": "{{base_url}}/api/login/", "host": ["{{base_url}}"], "path": ["api", "login", ""] },
+						"description": "Login → JWT access + refresh tokens (auto-saved). Switch email to leonilandrismessi@gmail.com to act as the rider."
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"if (res.access) pm.collectionVariables.set('access_token', res.access);"
+						] } }
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}" },
+						"url": { "raw": "{{base_url}}/api/token/refresh/", "host": ["{{base_url}}"], "path": ["api", "token", "refresh", ""] },
+						"description": "Exchange refresh token for a new access token."
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}" },
+						"url": { "raw": "{{base_url}}/api/logout/", "host": ["{{base_url}}"], "path": ["api", "logout", ""] },
+						"description": "Blacklist the refresh token."
+					}
+				}
+			]
+		},
+		{
+			"name": "Account (Any Authenticated User)",
+			"description": "Current user, profile update, OTP password change.",
+			"item": [
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/user/me/", "host": ["{{base_url}}"], "path": ["api", "user", "me", ""] },
+						"description": "Current authenticated user with profile + user_type."
+					}
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"full_name\": \"New Name\",\n    \"email\": \"newemail@example.com\",\n    \"phone_number\": \"+1234567890\"\n}" },
+						"url": { "raw": "{{base_url}}/api/user/profile/", "host": ["{{base_url}}"], "path": ["api", "user", "profile", ""] },
+						"description": "Update own profile (full_name, email, phone_number). PATCH or PUT."
+					}
+				},
+				{
+					"name": "Request Password Change (send OTP)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/user/password-change/request/", "host": ["{{base_url}}"], "path": ["api", "user", "password-change", "request", ""] },
+						"description": "Send a password-change OTP to the user's email."
+					}
+				},
+				{
+					"name": "Verify OTP & Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"otp_code\": \"123456\",\n    \"new_password\": \"newpassword123\",\n    \"new_password_confirm\": \"newpassword123\"\n}" },
+						"url": { "raw": "{{base_url}}/api/user/password-change/verify/", "host": ["{{base_url}}"], "path": ["api", "user", "password-change", "verify", ""] },
+						"description": "Verify the OTP and set a new password (min 8 chars)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Rider",
+			"description": "Rider side of the auction. Post a request → view offers → accept / counter / decline. The rider closes every deal.",
+			"item": [
+				{
+					"name": "Post Ride Request",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"if (res.ride && res.ride.id) pm.collectionVariables.set('ride_id', res.ride.id);"
+						] } }
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"offered_price\": 40.00,\n    \"pickup_latitude\": 30.0444,\n    \"pickup_longitude\": 31.2357,\n    \"pickup_location\": \"123 Main St\",\n    \"dropoff_latitude\": 30.0600,\n    \"dropoff_longitude\": 31.2490,\n    \"dropoff_location\": \"456 Market Ave\"\n}" },
+						"url": { "raw": "{{base_url}}/api/rides/request/", "host": ["{{base_url}}"], "path": ["api", "rides", "request", ""] },
+						"description": "Rider posts a general request, broadcast to all available drivers. Status → open. Pickup & dropoff COORDINATES are required; the *_location text labels are optional. Captures ride_id. Only one open request per rider at a time."
+					}
+				},
+				{
+					"name": "My Rides",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": {
+							"raw": "{{base_url}}/api/rides/?status=open,assigned",
+							"host": ["{{base_url}}"],
+							"path": ["api", "rides", ""],
+							"query": [
+								{ "key": "status", "value": "open,assigned", "description": "Optional: open | assigned | cancelled. Comma-separate for multiple. Hidden excluded by default." }
+							]
+						},
+						"description": "The rider's own requests."
+					}
+				},
+				{
+					"name": "List Offers on My Ride",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const arr = pm.response.json();",
+							"if (Array.isArray(arr) && arr.length) pm.collectionVariables.set('offer_id', arr[0].id);"
+						] } }
+					],
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/rides/{{ride_id}}/offers/", "host": ["{{base_url}}"], "path": ["api", "rides", "{{ride_id}}", "offers", ""] },
+						"description": "Offers on the rider's request — each with driver name, rating, vehicle, price, and driver_distance_km to the pickup. Captures the first offer_id."
+					}
+				},
+				{
+					"name": "Counter an Offer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"price\": 35.00\n}" },
+						"url": { "raw": "{{base_url}}/api/offers/{{offer_id}}/counter/", "host": ["{{base_url}}"], "path": ["api", "offers", "{{offer_id}}", "counter", ""] },
+						"description": "Rider counters a driver's offer with a (usually lower) price. Offer → countered. The driver may then re-offer."
+					}
+				},
+				{
+					"name": "Accept an Offer",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/offers/{{offer_id}}/accept/", "host": ["{{base_url}}"], "path": ["api", "offers", "{{offer_id}}", "accept", ""] },
+						"description": "Rider accepts an offer at its current price → driver assigned, per-trip fee charged, other offers declined, ride → assigned."
+					}
+				},
+				{
+					"name": "Decline an Offer",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/offers/{{offer_id}}/decline/", "host": ["{{base_url}}"], "path": ["api", "offers", "{{offer_id}}", "decline", ""] },
+						"description": "Rider declines a driver's offer (rider-only). The driver cannot decline."
+					}
+				},
+				{
+					"name": "Cancel My Ride",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/rides/{{ride_id}}/cancel/", "host": ["{{base_url}}"], "path": ["api", "rides", "{{ride_id}}", "cancel", ""] },
+						"description": "Rider cancels their own open request (status → cancelled; pending offers declined)."
+					}
+				},
+				{
+					"name": "Hide My Ride (Done)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/rides/{{ride_id}}/hide/", "host": ["{{base_url}}"], "path": ["api", "rides", "{{ride_id}}", "hide", ""] },
+						"description": "Dismiss a ride from the caller's list (is_hidden=true). Either party may hide a ride they're part of."
+					}
+				}
+			]
+		},
+		{
+			"name": "Driver",
+			"description": "Driver side of the auction. Go online (with location) → browse open requests near you → make an offer → re-offer if the rider counters. The driver cannot change an offer's status otherwise.",
+			"item": [
+				{
+					"name": "Get Driver Profile",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/driver/profile/", "host": ["{{base_url}}"], "path": ["api", "driver", "profile", ""] },
+						"description": "Current driver's profile (balance, availability, vehicle, location)."
+					}
+				},
+				{
+					"name": "Update Driver Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"is_available\": true\n}" },
+						"url": { "raw": "{{base_url}}/api/driver/profile/", "host": ["{{base_url}}"], "path": ["api", "driver", "profile", ""] },
+						"description": "Update profile. Going available requires balance ≥ price_per_trip."
+					}
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"latitude\": 30.0500,\n    \"longitude\": 31.2400\n}" },
+						"url": { "raw": "{{base_url}}/api/driver/location/", "host": ["{{base_url}}"], "path": ["api", "driver", "location", ""] },
+						"description": "Driver updates GPS. Used to sort open requests by nearest pickup and to show the rider the driver's distance."
+					}
+				},
+				{
+					"name": "Recharge Balance",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"amount\": 100.00\n}" },
+						"url": { "raw": "{{base_url}}/api/driver/recharge/", "host": ["{{base_url}}"], "path": ["api", "driver", "recharge", ""] },
+						"description": "Add funds to the driver's balance."
+					}
+				},
+				{
+					"name": "List Open Requests (nearest first)",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const arr = pm.response.json();",
+							"if (Array.isArray(arr) && arr.length) pm.collectionVariables.set('ride_id', arr[0].id);"
+						] } }
+					],
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/rides/open/", "host": ["{{base_url}}"], "path": ["api", "rides", "open", ""] },
+						"description": "Open ride requests, sorted by THIS driver's distance to each pickup (requests with no pickup coords last). Each item has distance_km and my_offer (this driver's offer if any). Captures the first ride_id."
+					}
+				},
+				{
+					"name": "Make / Update Offer",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"if (res.offer && res.offer.id) pm.collectionVariables.set('offer_id', res.offer.id);"
+						] } }
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{access_token}}" }
+						],
+						"body": { "mode": "raw", "raw": "{\n    \"price\": 45.00\n}" },
+						"url": { "raw": "{{base_url}}/api/rides/{{ride_id}}/offers/create/", "host": ["{{base_url}}"], "path": ["api", "rides", "{{ride_id}}", "offers", "create", ""] },
+						"description": "Driver submits an offer on an open request. Used both for the initial offer and to RE-OFFER after the rider counters (resets the offer to pending). Driver must be available with balance ≥ per-trip fee. Captures offer_id."
+					}
+				},
+				{
+					"name": "My Assigned Rides",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": {
+							"raw": "{{base_url}}/api/rides/?status=assigned",
+							"host": ["{{base_url}}"],
+							"path": ["api", "rides", ""],
+							"query": [{ "key": "status", "value": "assigned" }]
+						},
+						"description": "Rides this driver was assigned to (after a rider accepted their offer)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Vehicle Types (Public, Read-only)",
+			"description": "Public — used to get a valid vehicle_type_id for driver registration.",
+			"item": [
+				{
+					"name": "List Vehicle Types",
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"const list = Array.isArray(res) ? res : (res.results || []);",
+							"if (list.length) pm.collectionVariables.set('vehicle_type_id', list[0].id);"
+						] } }
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/vehicle-types/", "host": ["{{base_url}}"], "path": ["api", "vehicle-types", ""] },
+						"description": "List vehicle types (public). Auto-saves the first id into vehicle_type_id."
+					}
+				},
+				{
+					"name": "Get Vehicle Type by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/vehicle-types/{{vehicle_type_id}}/", "host": ["{{base_url}}"], "path": ["api", "vehicle-types", "{{vehicle_type_id}}", ""] },
+						"description": "Retrieve a single vehicle type."
+					}
+				}
+			]
+		},
+		{
+			"name": "Drivers Directory (Read-only)",
+			"description": "Authenticated, read-only driver listing with optional nearest-first sorting.",
+			"item": [
+				{
+					"name": "List Drivers",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": {
+							"raw": "{{base_url}}/api/drivers/?is_available=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "drivers", ""],
+							"query": [{ "key": "is_available", "value": "true" }]
+						},
+						"description": "List drivers. Filters: vehicle_type, vehicle_type__brand(__icontains), rating(__gte/__lte), is_available. Ordering: rating, total_rides. Search: name/email."
+					}
+				},
+				{
+					"name": "List Drivers (nearest first)",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": {
+							"raw": "{{base_url}}/api/drivers/?is_available=true&lat=30.0444&lng=31.2357",
+							"host": ["{{base_url}}"],
+							"path": ["api", "drivers", ""],
+							"query": [
+								{ "key": "is_available", "value": "true" },
+								{ "key": "lat", "value": "30.0444" },
+								{ "key": "lng", "value": "31.2357" }
+							]
+						},
+						"description": "With lat & lng, each driver gets distance_km and the list is sorted nearest-first (haversine, server-side)."
+					}
+				},
+				{
+					"name": "Get Driver by ID",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+						"url": { "raw": "{{base_url}}/api/drivers/{{driver_id}}/", "host": ["{{base_url}}"], "path": ["api", "drivers", "{{driver_id}}", ""] },
+						"description": "Single driver's full details."
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "base_url", "value": "http://127.0.0.1:8000", "type": "string" },
+		{ "key": "access_token", "value": "", "type": "string" },
+		{ "key": "refresh_token", "value": "", "type": "string" },
+		{ "key": "ride_id", "value": "1", "type": "string" },
+		{ "key": "offer_id", "value": "1", "type": "string" },
+		{ "key": "driver_id", "value": "1", "type": "string" },
+		{ "key": "vehicle_type_id", "value": "1", "type": "string" }
+	]
+}

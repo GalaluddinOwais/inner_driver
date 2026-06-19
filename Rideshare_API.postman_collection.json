@@ -1,0 +1,751 @@
+{
+	"info": {
+		"_postman_id": "rideshare-api-collection",
+		"name": "Rideshare API - Complete Collection",
+		"description": "Complete API collection for the Rideshare application including all authentication, user management, driver/rider operations, and ride management endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Register Driver",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.tokens.access);",
+									"    pm.environment.set(\"refresh_token\", jsonData.tokens.refresh);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"driver@example.com\",\n    \"password\": \"password123\",\n    \"password_confirm\": \"password123\",\n    \"full_name\": \"John Driver\",\n    \"phone_number\": \"+1234567890\",\n    \"vehicle_type_id\": 1,\n    \"vehicle_color\": \"black\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/register/driver/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"register",
+								"driver",
+								""
+							]
+						},
+						"description": "Register a new driver. Creates user account and driver profile. Sends OTP to email for verification."
+					},
+					"response": []
+				},
+				{
+					"name": "Register Rider",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.tokens.access);",
+									"    pm.environment.set(\"refresh_token\", jsonData.tokens.refresh);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"rider@example.com\",\n    \"password\": \"password123\",\n    \"password_confirm\": \"password123\",\n    \"full_name\": \"Jane Rider\",\n    \"phone_number\": \"+9876543210\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/register/rider/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"register",
+								"rider",
+								""
+							]
+						},
+						"description": "Register a new rider. Creates user account and rider profile. Sends OTP to email for verification."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.tokens.access);",
+									"    pm.environment.set(\"refresh_token\", jsonData.tokens.refresh);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"driver@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/login/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"login",
+								""
+							]
+						},
+						"description": "Login with email and password. Returns access and refresh JWT tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/logout/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"logout",
+								""
+							]
+						},
+						"description": "Logout by blacklisting the refresh token. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.access);",
+									"    pm.environment.set(\"refresh_token\", jsonData.refresh);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/refresh/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"token",
+								"refresh",
+								""
+							]
+						},
+						"description": "Refresh access token using refresh token. Returns new access and refresh tokens."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for registration, login, logout, and token refresh."
+		},
+		{
+			"name": "2. User Profile",
+			"item": [
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/user/me/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"me",
+								""
+							]
+						},
+						"description": "Get current authenticated user profile with nested driver/rider profile data."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"Updated Name\",\n    \"email\": \"newemail@example.com\",\n    \"phone_number\": \"+1112223333\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"profile",
+								""
+							]
+						},
+						"description": "Update user profile fields (full_name, email, phone_number). Only authenticated user can update their own profile."
+					},
+					"response": []
+				},
+				{
+					"name": "Request Password Change (Send OTP)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/user/password-change/request/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"password-change",
+								"request",
+								""
+							]
+						},
+						"description": "Request password change. Sends OTP to user's email. Check your email for the 6-digit code."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify OTP and Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"otp_code\": \"123456\",\n    \"new_password\": \"newpassword123\",\n    \"new_password_confirm\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/password-change/verify/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"password-change",
+								"verify",
+								""
+							]
+						},
+						"description": "Verify OTP code and change password. OTP expires after 10 minutes."
+					},
+					"response": []
+				}
+			],
+			"description": "User profile management and password change endpoints."
+		},
+		{
+			"name": "3. Driver Management",
+			"item": [
+				{
+					"name": "Get Driver Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"profile",
+								""
+							]
+						},
+						"description": "Get current driver's profile with vehicle information and balance."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Driver Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicle_type_id\": 2,\n    \"vehicle_color\": \"white\",\n    \"is_available\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/driver/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"profile",
+								""
+							]
+						},
+						"description": "Update driver profile. Setting is_available=true deducts price_per_trip from balance."
+					},
+					"response": []
+				},
+				{
+					"name": "Recharge Balance",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 100.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/driver/recharge/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"recharge",
+								""
+							]
+						},
+						"description": "Recharge driver's balance. Only drivers can access this endpoint."
+					},
+					"response": []
+				},
+				{
+					"name": "List All Drivers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/drivers/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"drivers",
+								""
+							]
+						},
+						"description": "List all drivers with pagination. Supports filtering by vehicle_type, is_available, rating, etc."
+					},
+					"response": []
+				},
+				{
+					"name": "List Available Drivers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/drivers/?is_available=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"drivers",
+								""
+							],
+							"query": [
+								{
+									"key": "is_available",
+									"value": "true"
+								}
+							]
+						},
+						"description": "List only available drivers ready to accept rides."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Driver Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/drivers/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"drivers",
+								"1",
+								""
+							]
+						},
+						"description": "Get detailed information about a specific driver including full user profile and vehicle details."
+					},
+					"response": []
+				}
+			],
+			"description": "Driver profile management, balance recharge, and driver listing endpoints."
+		},
+		{
+			"name": "4. Ride Management",
+			"item": [
+				{
+					"name": "Request Ride (Rider)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"ride_id\", jsonData.ride.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver_id\": 1,\n    \"price\": 50.00,\n    \"pickup_location\": \"123 Main St, City\",\n    \"dropoff_location\": \"456 Oak Ave, City\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/rides/request/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rides",
+								"request",
+								""
+							]
+						},
+						"description": "Rider requests a ride from an available driver. Sends real-time notification to driver via WebSocket."
+					},
+					"response": []
+				},
+				{
+					"name": "Accept Ride (Driver)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/rides/{{ride_id}}/accept/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rides",
+								"{{ride_id}}",
+								"accept",
+								""
+							]
+						},
+						"description": "Driver accepts a pending ride request. Sets driver availability to false. Sends notification to rider."
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Ride with Counter Price (Driver)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"rejection_price\": 75.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/rides/{{ride_id}}/reject/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rides",
+								"{{ride_id}}",
+								"reject",
+								""
+							]
+						},
+						"description": "Driver rejects ride with a counter price offer. Sends notification to rider with new price."
+					},
+					"response": []
+				},
+				{
+					"name": "Re-request Ride (Rider accepts counter price)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/rides/{{ride_id}}/rerequest/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rides",
+								"{{ride_id}}",
+								"rerequest",
+								""
+							]
+						},
+						"description": "Rider accepts driver's counter price and re-requests the ride. Changes status from rejected to pending with new price."
+					},
+					"response": []
+				}
+			],
+			"description": "Ride request, acceptance, rejection, and counter-pricing endpoints."
+		},
+		{
+			"name": "5. WebSocket Testing (HTML Pages)",
+			"item": [
+				{
+					"name": "WebSocket Test Instructions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "",
+							"host": [
+								""
+							]
+						},
+						"description": "WebSocket endpoints cannot be tested directly in Postman. Use the HTML test pages provided in the WebSocket_Test_Pages folder.\n\n**WebSocket Endpoints:**\n\n1. **Ride Notifications:**\n   - URL: `ws://localhost:8000/ws/notifications/?token=YOUR_ACCESS_TOKEN`\n   - Purpose: Real-time ride request/accept/reject notifications\n   - Available to: Both drivers and riders\n\n2. **Driver Location Tracking:**\n   - URL: `ws://localhost:8000/ws/location/?token=YOUR_ACCESS_TOKEN`\n   - Purpose: Real-time driver location updates\n   - Drivers: Send location updates\n   - Riders: Receive location updates for tracked drivers\n\n**Message Formats:**\n\nDriver sends location:\n```json\n{\n    \"type\": \"location_update\",\n    \"latitude\": 40.7128,\n    \"longitude\": -74.0060\n}\n```\n\nRider receives location:\n```json\n{\n    \"type\": \"location_update\",\n    \"driver_id\": 1,\n    \"latitude\": \"40.712800\",\n    \"longitude\": \"-74.006000\",\n    \"timestamp\": \"2025-01-15T10:30:00Z\"\n}\n```\n\nRide notification:\n```json\n{\n    \"type\": \"ride_requested\",\n    \"message\": \"New ride request from Jane Rider\",\n    \"ride\": {\n        \"id\": 1,\n        \"status\": \"pending\",\n        \"price\": \"50.00\",\n        \"pickup_location\": \"123 Main St\",\n        \"dropoff_location\": \"456 Oak Ave\"\n    }\n}\n```"
+					},
+					"response": []
+				}
+			],
+			"description": "WebSocket connection information and testing instructions."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ride_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

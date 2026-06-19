@@ -1,0 +1,30 @@
+PS C:\WINDOWS\system32> New-NetFirewallRule -DisplayName "Inner Driver Dev Ports" -Direction Inbound -Protocol TCP -LocalPort 8000,8081,8082 -Action Allow -Profile Private
+
+
+Name                          : {31dce686-8a05-4f85-83cd-84d96dd8e5dc}
+DisplayName                   : Inner Driver Dev Ports
+Description                   :
+DisplayGroup                  :
+Group                         :
+Enabled                       : True
+Profile                       : Private
+Platform                      : {}
+Direction                     : Inbound
+Action                        : Allow
+EdgeTraversalPolicy           : Block
+LooseSourceMapping            : False
+LocalOnlyMapping              : False
+Owner                         :
+PrimaryStatus                 : OK
+Status                        : The rule was parsed successfully from the store. (65536)
+EnforcementStatus             : NotApplicable
+PolicyStoreSource             : PersistentStore
+PolicyStoreSourceType         : Local
+RemoteDynamicKeywordAddresses : {}
+PolicyAppId                   :
+PackageFamilyName             :
+
+
+
+PS C:\WINDOWS\system32> Remove-NetFirewallRule -DisplayName "Inner Driver Dev Ports"
+PS C:\WINDOWS\system32>

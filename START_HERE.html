@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rideshare API - Testing Package</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h3 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .card ul {
+            list-style: none;
+            margin: 10px 0;
+        }
+
+        .card ul li {
+            padding: 5px 0;
+            color: #555;
+        }
+
+        .card ul li:before {
+            content: "✅ ";
+            color: #26de81;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .quick-start {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+
+        .quick-start h2 {
+            color: white;
+            border-bottom: 3px solid white;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .quick-start ol {
+            margin-left: 20px;
+            line-height: 2;
+        }
+
+        .quick-start li {
+            font-size: 18px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .label {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .warning h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .warning ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Rideshare API</h1>
+            <p>Complete Testing Package - Everything You Need!</p>
+        </div>
+
+        <div class="content">
+            <!-- Stats Section -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="number">16</div>
+                    <div class="label">REST API Endpoints</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">2</div>
+                    <div class="label">WebSocket Endpoints</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">3</div>
+                    <div class="label">Interactive HTML Pages</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">5</div>
+                    <div class="label">Documentation Files</div>
+                </div>
+            </div>
+
+            <!-- Quick Start -->
+            <div class="quick-start">
+                <h2>🚀 Quick Start (3 Steps)</h2>
+                <ol>
+                    <li><strong>Import to Postman:</strong> Open Postman → Import → <code>Rideshare_API.postman_collection.json</code></li>
+                    <li><strong>Start Server:</strong> Run <code>python manage.py runserver</code></li>
+                    <li><strong>Test First Endpoint:</strong> Postman → Register Driver → Send ✅</li>
+                </ol>
+            </div>
+
+            <!-- Files Section -->
+            <div class="section">
+                <h2>📦 What You Have</h2>
+                <div class="grid">
+                    <div class="card">
+                        <h3>📄 Postman Collection</h3>
+                        <p><strong>File:</strong> <code>Rideshare_API.postman_collection.json</code></p>
+                        <ul>
+                            <li>16 REST endpoints</li>
+                            <li>Auto-saved tokens</li>
+                            <li>Pre-configured bodies</li>
+                            <li>Test scripts included</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>🌐 WebSocket Test Pages</h3>
+                        <p><strong>Folder:</strong> <code>WebSocket_Test_Pages/</code></p>
+                        <ul>
+                            <li>driver_location_sender.html</li>
+                            <li>rider_location_receiver.html</li>
+                            <li>ride_notifications_tester.html</li>
+                        </ul>
+                        <a href="WebSocket_Test_Pages/driver_location_sender.html" class="btn">Open Driver Location Sender</a>
+                        <a href="WebSocket_Test_Pages/rider_location_receiver.html" class="btn">Open Rider Location Receiver</a>
+                        <a href="WebSocket_Test_Pages/ride_notifications_tester.html" class="btn">Open Notifications Tester</a>
+                    </div>
+
+                    <div class="card">
+                        <h3>📚 Documentation</h3>
+                        <ul>
+                            <li>API_TESTING_README.md</li>
+                            <li>API_TESTING_COMPLETE_GUIDE.md</li>
+                            <li>POSTMAN_GUIDE.md</li>
+                            <li>OTP_AND_PROFILE_README.md</li>
+                            <li>WebSocket_Test_Pages/README.md</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation Guide -->
+            <div class="section">
+                <h2>📖 Which Guide to Read?</h2>
+                <div class="grid">
+                    <div class="card">
+                        <h3>🆕 New to the Project?</h3>
+                        <p>Start here to get an overview</p>
+                        <strong>Read:</strong> <code>API_TESTING_README.md</code>
+                    </div>
+
+                    <div class="card">
+                        <h3>🧪 Ready to Test?</h3>
+                        <p>Complete test cases with step-by-step instructions</p>
+                        <strong>Read:</strong> <code>API_TESTING_COMPLETE_GUIDE.md</code>
+                    </div>
+
+                    <div class="card">
+                        <h3>📮 Using Postman?</h3>
+                        <p>Detailed Postman usage and workflows</p>
+                        <strong>Read:</strong> <code>POSTMAN_GUIDE.md</code>
+                    </div>
+
+                    <div class="card">
+                        <h3>🔌 Testing WebSockets?</h3>
+                        <p>WebSocket testing guide with HTML pages</p>
+                        <strong>Read:</strong> <code>WebSocket_Test_Pages/README.md</code>
+                    </div>
+
+                    <div class="card">
+                        <h3>📧 Testing Email/OTP?</h3>
+                        <p>Email configuration and OTP features</p>
+                        <strong>Read:</strong> <code>OTP_AND_PROFILE_README.md</code>
+                    </div>
+
+                    <div class="card">
+                        <h3>⚡ Quick Summary?</h3>
+                        <p>Plain text overview</p>
+                        <strong>Read:</strong> <code>TESTING_SUMMARY.txt</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="section">
+                <h2>🎯 What Can You Test?</h2>
+                <div class="grid">
+                    <div class="card">
+                        <h3>Authentication (5 endpoints)</h3>
+                        <ul>
+                            <li>Register Driver/Rider</li>
+                            <li>Login/Logout</li>
+                            <li>Token Refresh</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>User Profile (4 endpoints)</h3>
+                        <ul>
+                            <li>Get/Update Profile</li>
+                            <li>Password Change with OTP</li>
+                            <li>Email Verification</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>Driver Management (5 endpoints)</h3>
+                        <ul>
+                            <li>Profile Management</li>
+                            <li>Balance Recharge</li>
+                            <li>List & Filter Drivers</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>Rides (4 endpoints)</h3>
+                        <ul>
+                            <li>Request/Accept/Reject</li>
+                            <li>Counter-price Negotiation</li>
+                            <li>Re-request Rides</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>WebSocket - Notifications</h3>
+                        <ul>
+                            <li>Ride Requests</li>
+                            <li>Acceptances/Rejections</li>
+                            <li>Real-time Alerts</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>WebSocket - Location</h3>
+                        <ul>
+                            <li>Driver GPS Broadcasting</li>
+                            <li>Rider Location Tracking</li>
+                            <li>Real-time Updates</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prerequisites -->
+            <div class="warning">
+                <h4>⚠️ Before You Start - Checklist</h4>
+                <ul>
+                    <li>Python dependencies installed: <code>pip install -r requirements.txt</code></li>
+                    <li>Database migrated: <code>python manage.py migrate</code></li>
+                    <li>.env file created (copy from .env.example)</li>
+                    <li>At least one VehicleType exists in database</li>
+                    <li>Django server running: <code>python manage.py runserver</code></li>
+                    <li>Postman collection imported</li>
+                </ul>
+            </div>
+
+            <!-- Sample Workflow -->
+            <div class="section">
+                <h2>🔄 Sample Workflow (15 Minutes)</h2>
+                <div class="card">
+                    <ol style="margin-left: 20px; line-height: 2;">
+                        <li><strong>Register Driver</strong> (Postman) → OTP email sent ✅</li>
+                        <li><strong>Recharge Balance</strong> (Postman) → $500 added ✅</li>
+                        <li><strong>Set Available</strong> (Postman) → $50 deducted ✅</li>
+                        <li><strong>Register Rider</strong> (Postman) → Token saved ✅</li>
+                        <li><strong>Request Ride</strong> (Postman as Rider) → Ride created ✅</li>
+                        <li><strong>Connect WebSocket</strong> (Browser) → See notification 🔔</li>
+                        <li><strong>Accept Ride</strong> (Postman as Driver) → Rider notified ✅</li>
+                        <li><strong>Send Location</strong> (Browser) → Rider sees updates 📍</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>🎉 You have everything you need to test the Rideshare API!</strong></p>
+            <p>Start with <code>API_TESTING_README.md</code> for an overview, then dive into testing!</p>
+            <p style="margin-top: 20px; color: #999;">Happy Testing! 🚀</p>
+        </div>
+    </div>
+</body>
+</html>

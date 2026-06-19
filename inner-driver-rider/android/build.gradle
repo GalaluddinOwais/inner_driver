@@ -1,0 +1,42 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath('com.android.tools.build:gradle')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
+}
+
+// Force the NDK version BEFORE the expo-root-project plugin applies. That
+// plugin uses setIfNotExist("ndkVersion"), so it keeps this value instead of
+// defaulting to 27.1.12297006 (a ~1GB download that kept failing).
+ext.ndkVersion = "30.0.14904198"
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"
+
+// Force every Android sub-module to use build-tools 36.0.0 (installed locally),
+// instead of falling back to AGP 8.11's default 35.0.0 — which triggered a
+// download that kept hanging. Hook the moment the android plugin is applied,
+// which is safe even under --configure-on-demand (afterEvaluate is not).
+subprojects { subproject ->
+  subproject.plugins.withId("com.android.library") {
+    subproject.extensions.getByName("android").buildToolsVersion = "36.0.0"
+  }
+  subproject.plugins.withId("com.android.application") {
+    subproject.extensions.getByName("android").buildToolsVersion = "36.0.0"
+  }
+}

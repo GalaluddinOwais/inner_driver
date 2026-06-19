@@ -1,0 +1,233 @@
+================================================================================
+           🚗 RIDESHARE API - COMPLETE TESTING PACKAGE 🚗
+================================================================================
+
+📦 WHAT YOU GOT:
+================================================================================
+
+1. POSTMAN COLLECTION (Rideshare_API.postman_collection.json)
+   ✅ 16 REST API endpoints
+   ✅ Automatic token management
+   ✅ Pre-configured request bodies
+   ✅ Test scripts included
+
+2. WEBSOCKET TEST PAGES (WebSocket_Test_Pages/)
+   ✅ driver_location_sender.html - Send GPS updates
+   ✅ rider_location_receiver.html - Receive locations
+   ✅ ride_notifications_tester.html - Test notifications
+
+3. COMPREHENSIVE DOCUMENTATION
+   ✅ API_TESTING_COMPLETE_GUIDE.md - Full testing guide
+   ✅ POSTMAN_GUIDE.md - Postman usage
+   ✅ OTP_AND_PROFILE_README.md - Email/OTP features
+   ✅ WebSocket_Test_Pages/README.md - WebSocket guide
+
+================================================================================
+🚀 QUICK START (3 STEPS):
+================================================================================
+
+STEP 1: Import to Postman
+   • Open Postman
+   • Click Import
+   • Select: Rideshare_API.postman_collection.json
+
+STEP 2: Start Server
+   cd "c:\Users\galaluddin.o\Desktop\New folder"
+   python manage.py runserver
+
+STEP 3: Test First Endpoint
+   • Postman → 1. Authentication → Register Driver
+   • Click Send
+   • ✅ Done! Token auto-saved!
+
+================================================================================
+📚 WHICH GUIDE TO READ:
+================================================================================
+
+NEW TO THE PROJECT?
+→ Start with: API_TESTING_README.md (this gives you overview)
+→ Then read: API_TESTING_COMPLETE_GUIDE.md (detailed test cases)
+
+USING POSTMAN?
+→ Read: POSTMAN_GUIDE.md
+
+TESTING WEBSOCKETS?
+→ Read: WebSocket_Test_Pages/README.md
+
+TESTING EMAIL/OTP?
+→ Read: OTP_AND_PROFILE_README.md
+
+================================================================================
+🎯 WHAT CAN YOU TEST:
+================================================================================
+
+REST API ENDPOINTS (16 total):
+
+Authentication (5):
+   • POST /api/register/driver/
+   • POST /api/register/rider/
+   • POST /api/login/
+   • POST /api/logout/
+   • POST /api/token/refresh/
+
+User Profile (4):
+   • GET /api/user/me/
+   • PATCH /api/user/profile/
+   • POST /api/user/password-change/request/
+   • POST /api/user/password-change/verify/
+
+Driver Management (5):
+   • GET /api/driver/profile/
+   • PATCH /api/driver/profile/
+   • POST /api/driver/recharge/
+   • GET /api/drivers/
+   • GET /api/drivers/{id}/
+
+Rides (4):
+   • POST /api/rides/request/
+   • POST /api/rides/{id}/accept/
+   • POST /api/rides/{id}/reject/
+   • POST /api/rides/{id}/rerequest/
+
+WEBSOCKET ENDPOINTS (2):
+   • ws://localhost:8000/ws/notifications/?token=XXX
+   • ws://localhost:8000/ws/location/?token=XXX
+
+================================================================================
+🧪 SAMPLE WORKFLOW (15 MINUTES):
+================================================================================
+
+1. Register Driver (Postman)
+   → OTP sent to email ✅
+   → Token auto-saved ✅
+
+2. Recharge Driver Balance (Postman)
+   → Balance: $500 ✅
+
+3. Set Driver Available (Postman)
+   → Balance deducted: $50 ✅
+   → Driver is_available: true ✅
+
+4. Register Rider (Postman)
+   → OTP sent to email ✅
+   → Token auto-saved ✅
+
+5. Request Ride (Postman as Rider)
+   → Ride created ✅
+   → ride_id auto-saved ✅
+
+6. Open WebSocket Notification Page (Browser)
+   → Connect with driver token
+   → See "Ride Requested" notification in real-time! 🔔
+
+7. Accept Ride (Postman as Driver)
+   → Ride accepted ✅
+   → Driver unavailable ✅
+
+8. Open WebSocket Notification Page (Browser)
+   → Connect with rider token
+   → See "Ride Accepted" notification in real-time! 🔔
+
+9. Send Driver Location (Browser - driver_location_sender.html)
+   → Connect with driver token
+   → Click "Simulate Movement"
+   → 10 location updates sent ✅
+
+10. Receive Location Updates (Browser - rider_location_receiver.html)
+    → Connect with rider token
+    → See real-time location updates! 📍
+
+✅ COMPLETE WORKFLOW TESTED!
+
+================================================================================
+💡 PRO TIPS:
+================================================================================
+
+1. Use WebSocket HTML pages - Visual testing is easier!
+2. Keep Postman and browser open side-by-side
+3. Check Django console for OTP codes (if using console email backend)
+4. Tokens auto-save - no manual copy/paste needed
+5. Read error messages - they're helpful!
+
+================================================================================
+🐛 COMMON ISSUES & FIXES:
+================================================================================
+
+"Connection refused"
+   → Django server not running
+   → Run: python manage.py runserver
+
+"Unauthorized 401"
+   → Token expired
+   → Use Refresh Token or Login again
+
+"Forbidden 403"
+   → Wrong user type or not your resource
+   → Check you're logged in as correct user
+
+"WebSocket connection fails"
+   → Invalid token or token expired
+   → Get fresh token from login
+
+"Email not sending"
+   → .env not configured
+   → Use console backend for testing:
+      EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+================================================================================
+✅ PRE-FLIGHT CHECKLIST:
+================================================================================
+
+[ ] Python dependencies installed (pip install -r requirements.txt)
+[ ] Database migrated (python manage.py migrate)
+[ ] .env file created (copy from .env.example)
+[ ] At least one VehicleType exists in database
+[ ] Django server running (python manage.py runserver)
+[ ] Postman collection imported
+
+To create VehicleType:
+   python manage.py shell
+   >>> from api.models import VehicleType
+   >>> VehicleType.objects.create(brand="Toyota", model="Camry")
+   >>> exit()
+
+================================================================================
+📖 DOCUMENTATION FILES:
+================================================================================
+
+API_TESTING_README.md
+   → Overview and quick start
+
+API_TESTING_COMPLETE_GUIDE.md
+   → Comprehensive test cases (READ THIS FIRST!)
+
+POSTMAN_GUIDE.md
+   → Detailed Postman usage and workflows
+
+OTP_AND_PROFILE_README.md
+   → Email configuration and OTP features
+
+WebSocket_Test_Pages/README.md
+   → WebSocket testing guide
+
+================================================================================
+🎉 READY TO TEST!
+================================================================================
+
+You have EVERYTHING you need:
+   ✅ Complete Postman collection with 16 endpoints
+   ✅ 3 Interactive WebSocket test pages
+   ✅ 5 Comprehensive documentation files
+   ✅ Step-by-step test cases
+   ✅ Error scenarios and troubleshooting
+   ✅ Complete workflow examples
+
+START HERE:
+   1. Read: API_TESTING_README.md
+   2. Then: API_TESTING_COMPLETE_GUIDE.md
+   3. Import Postman collection
+   4. Start testing!
+
+HAPPY TESTING! 🚀
+
+================================================================================
