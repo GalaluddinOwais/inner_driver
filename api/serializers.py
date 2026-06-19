@@ -1,22 +1,35 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from decimal import Decimal, ROUND_HALF_UP
-from .models import Driver, Rider, VehicleType, Ride, Offer
+from .models import Driver, Rider, VehicleBrand, VehicleModel, Ride, Offer
 
 User = get_user_model()
 
 
-class VehicleTypeSerializer(serializers.ModelSerializer):
-    """Serializer for VehicleType"""
+class VehicleBrandSerializer(serializers.ModelSerializer):
+    """A vehicle brand for the brand picker."""
     class Meta:
-        model = VehicleType
-        fields = ['id', 'brand', 'model']
+        model = VehicleBrand
+        fields = ['id', 'name']
         read_only_fields = ['id']
+
+
+class VehicleModelSerializer(serializers.ModelSerializer):
+    """A vehicle model. Exposes brand id/name plus a `model` alias for the
+    model's own name, so existing UI that reads {brand, model} keeps working."""
+    brand = serializers.CharField(source='brand.name', read_only=True)
+    brand_id = serializers.IntegerField(source='brand.id', read_only=True)
+    model = serializers.CharField(source='name', read_only=True)
+
+    class Meta:
+        model = VehicleModel
+        fields = ['id', 'brand', 'brand_id', 'model']
+        read_only_fields = ['id', 'brand', 'brand_id', 'model']
 
 
 class DriverProfileSerializer(serializers.ModelSerializer):
     """Serializer for Driver profile"""
-    vehicle_type = VehicleTypeSerializer(read_only=True)
+    vehicle_type = VehicleModelSerializer(read_only=True)
 
     class Meta:
         model = Driver
@@ -49,21 +62,21 @@ class DriverRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
     password_confirm = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
     vehicle_type_id = serializers.IntegerField(required=True, write_only=True)
-    vehicle_color = serializers.ChoiceField(choices=Driver.COLOR_CHOICES, required=True)
+    vehicle_color = serializers.CharField(required=True, max_length=9)
 
     class Meta:
         model = User
         fields = ['email', 'password', 'password_confirm', 'full_name', 'phone_number', 'vehicle_type_id', 'vehicle_color']
 
     def validate(self, attrs):
-        """Validate that passwords match and vehicle type exists"""
+        """Validate that passwords match and the vehicle model exists"""
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
 
-        # Validate vehicle type exists
+        # Validate vehicle model exists (field kept named vehicle_type_id)
         vehicle_type_id = attrs.get('vehicle_type_id')
-        if not VehicleType.objects.filter(id=vehicle_type_id).exists():
-            raise serializers.ValidationError({"vehicle_type_id": "Vehicle type does not exist."})
+        if not VehicleModel.objects.filter(id=vehicle_type_id).exists():
+            raise serializers.ValidationError({"vehicle_type_id": "Vehicle model does not exist."})
 
         return attrs
 
@@ -173,7 +186,7 @@ class DriverListSerializer(serializers.ModelSerializer):
 class DriverDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for retrieving individual driver (used in retrieve view)"""
     user = UserSerializer(read_only=True)
-    vehicle_type = VehicleTypeSerializer(read_only=True)
+    vehicle_type = VehicleModelSerializer(read_only=True)
 
     class Meta:
         model = Driver
@@ -197,7 +210,7 @@ class DriverDetailSerializer(serializers.ModelSerializer):
 class DriverUpdateSerializer(serializers.ModelSerializer):
     """Serializer for drivers to update their own profile"""
     vehicle_type_id = serializers.IntegerField(required=False, write_only=True)
-    vehicle_type = VehicleTypeSerializer(read_only=True)
+    vehicle_type = VehicleModelSerializer(read_only=True)
 
     class Meta:
         model = Driver
@@ -211,9 +224,9 @@ class DriverUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['vehicle_type']
 
     def validate_vehicle_type_id(self, value):
-        """Validate that the vehicle type exists"""
-        if not VehicleType.objects.filter(id=value).exists():
-            raise serializers.ValidationError("Vehicle type does not exist.")
+        """Validate that the vehicle model exists"""
+        if not VehicleModel.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Vehicle model does not exist.")
         return value
 
     def validate(self, attrs):

@@ -15,9 +15,52 @@ export default function DiscoverMap({ riderLoc, drivers = [], driverLive, driver
     const bigIconName = confirmed
       ? (activeRide.driver_single_ride_mode ? "car-sport" : "bus")
       : assigned ? "hourglass" : "radio";
+
+    // Vehicle label: "Brand Model" with any "Other" token dropped (so an "Other"
+    // brand/model shows nothing rather than the word "Other").
+    const vehicleLabel = (activeRide.driver_vehicle || "")
+      .split(" ")
+      .filter((w) => w && w.toLowerCase() !== "other")
+      .join(" ")
+      .trim();
+    const vehicleColor = activeRide.driver_vehicle_color || null;
+    const showVehicle = confirmed && (vehicleLabel || vehicleColor);
+    // No white glow on light colors (White/Silver/Tan/Beige) — it just looks muddy.
+    const LIGHT_COLORS = ["#FFFFFF", "#C0C0C0", "#D2B48C", "#E8DCC0"];
+    const glowOn = vehicleColor && !LIGHT_COLORS.includes(vehicleColor.toUpperCase());
+
     return (
       <View style={[styles.wrap, styles.center]}>
-        <Ionicons name={bigIconName} size={56} color={confirmed ? "#e2e8f0" : "#38bdf8"} style={styles.bigIcon} />
+        {showVehicle ? (
+          <View style={styles.vehicleRow}>
+            {vehicleLabel ? <Text style={styles.vehicleText}>{vehicleLabel}</Text> : null}
+          </View>
+        ) : null}
+        {confirmed && vehicleColor ? (
+          glowOn ? (
+            // Stack several white-glow copies behind the colored icon. Overlapping
+            // shadows build up opacity → a bigger, more solid white halo.
+            <View style={styles.bigIcon}>
+              {[0, 1, 2, 4, 5, 6, 7, 8, 9].map((i) => (
+                <Ionicons
+                  key={i}
+                  name={bigIconName}
+                  size={56}
+                  color={vehicleColor}
+                  style={[
+                    i > 0 ? styles.bigIconLayer : null,
+                    { textShadowColor: "#ffffff", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
+                  ]}
+                />
+              ))}
+            </View>
+          ) : (
+            // Light color (White/Silver/Tan/Beige): no glow, just the plain colored icon.
+            <Ionicons name={bigIconName} size={56} color={vehicleColor} style={styles.bigIcon} />
+          )
+        ) : (
+          <Ionicons name={bigIconName} size={56} color={confirmed ? "#e2e8f0" : "#38bdf8"} style={styles.bigIcon} />
+        )}
         <Text style={styles.activeTitle}>
           {confirmed ? "Driver on the way" : assigned ? "Driver chosen — confirming" : "Finding you a ride"}
         </Text>
@@ -83,7 +126,13 @@ export default function DiscoverMap({ riderLoc, drivers = [], driverLive, driver
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: "#0f172a", paddingHorizontal: 16, paddingTop: 90 },
   center: { justifyContent: "center", alignItems: "center" },
-  bigIcon: { marginBottom: 12 },
+  bigIcon: { marginBottom: 12, alignItems: "center", justifyContent: "center" },
+  // Extra glow copies stacked exactly over the first one.
+  bigIconLayer: { position: "absolute", top: 0, left: 0 },
+  vehicleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+  vehicleText: { color: "#e2e8f0", fontSize: 15, fontWeight: "700" },
+  vehicleDot: { color: "#64748b", fontSize: 15, fontWeight: "700" },
+  colorDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: "#475569" },
   activeTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
   activeSub: { color: "#94a3b8", fontSize: 14, marginTop: 6, textAlign: "center", paddingHorizontal: 24 },
   activeAddrCol: { alignItems: "center", gap: 6, marginTop: 14, paddingHorizontal: 24 },

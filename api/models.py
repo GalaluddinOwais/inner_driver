@@ -109,40 +109,40 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
         return self.full_name
 
 
-class VehicleType(models.Model):
-    """
-    Vehicle type model storing brand and model information
-    """
-    brand = models.CharField(max_length=50, help_text="Vehicle brand (e.g., Toyota, Honda)")
-    model = models.CharField(max_length=50, help_text="Vehicle model (e.g., Camry, Accord)")
+class VehicleBrand(models.Model):
+    """Vehicle brand (e.g., Toyota, Honda)."""
+    name = models.CharField(max_length=50, unique=True, help_text="Brand name, e.g. Toyota")
 
     class Meta:
-        unique_together = ['brand', 'model']
-        ordering = ['brand', 'model']
+        ordering = ['name']
 
     def __str__(self):
-        return f"{self.brand} {self.model}"
+        return self.name
+
+
+class VehicleModel(models.Model):
+    """A specific model under a brand (e.g., Camry under Toyota)."""
+    brand = models.ForeignKey(VehicleBrand, on_delete=models.CASCADE, related_name='models')
+    name = models.CharField(max_length=50, help_text="Model name, e.g. Camry")
+
+    class Meta:
+        unique_together = ['brand', 'name']
+        ordering = ['brand__name', 'name']
+
+    def __str__(self):
+        return f"{self.brand.name} {self.name}"
 
 
 class Driver(models.Model):
     """
     Driver profile with one-to-one relationship to User
     """
-    COLOR_CHOICES = [
-        ('black', 'Black'),
-        ('white', 'White'),
-        ('silver', 'Silver'),
-        ('gray', 'Gray'),
-        ('red', 'Red'),
-        ('blue', 'Blue'),
-        ('green', 'Green'),
-        ('yellow', 'Yellow'),
-        ('other', 'Other'),
-    ]
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='driver_profile')
-    vehicle_type = models.ForeignKey(VehicleType, on_delete=models.PROTECT, related_name='drivers')
-    vehicle_color = models.CharField(max_length=20, choices=COLOR_CHOICES, default='white')
+    # FK to the specific vehicle model (which knows its brand). Field kept named
+    # `vehicle_type` to avoid churn across the API/frontend.
+    vehicle_type = models.ForeignKey('VehicleModel', on_delete=models.PROTECT, related_name='drivers')
+    # Hex color string, e.g. "#C0C0C0". The frontend renders a swatch palette.
+    vehicle_color = models.CharField(max_length=9, default='#FFFFFF', help_text="Vehicle color as hex, e.g. #C0C0C0")
     price_per_trip = models.DecimalField(max_digits=10, decimal_places=2, default=50.00, help_text="Price paid to company per trip")
     current_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="رصيد الاستقلالات")
     is_available = models.BooleanField(default=False)

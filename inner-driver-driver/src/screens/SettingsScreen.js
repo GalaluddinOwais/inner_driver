@@ -5,12 +5,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  getMe, getDriverProfile, listVehicleTypes,
+  getMe, getDriverProfile,
   updateUserProfile, updateDriverProfile, setSingleRideMode,
   requestPasswordOtp, verifyPasswordChange,
 } from "../api/driver";
 import { apiError } from "../api/client";
 import { COLOR_CHOICES } from "../config";
+import { VehiclePicker, ColorSwatches } from "./VehiclePicker";
 
 export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
@@ -19,9 +20,9 @@ export default function SettingsScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [vehicleTypes, setVehicleTypes] = useState([]);
-  const [vehicleTypeId, setVehicleTypeId] = useState(null);
-  const [color, setColor] = useState("white");
+  const [vehicleTypeId, setVehicleTypeId] = useState(null); // selected VehicleModel id
+  const [initialBrandId, setInitialBrandId] = useState(null); // pre-open current brand
+  const [color, setColor] = useState(COLOR_CHOICES[0].hex);
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Ride mode
@@ -39,15 +40,15 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [me, profile, types] = await Promise.all([
-          getMe(), getDriverProfile(), listVehicleTypes(),
+        const [me, profile] = await Promise.all([
+          getMe(), getDriverProfile(),
         ]);
         setFullName(me.full_name || "");
         setEmail(me.email || "");
         setPhone(me.phone_number || "");
-        setVehicleTypes(types);
-        setColor(profile.vehicle_color || "white");
+        setColor(profile.vehicle_color || COLOR_CHOICES[0].hex);
         setVehicleTypeId(profile.vehicle_type?.id ?? null);
+        setInitialBrandId(profile.vehicle_type?.brand_id ?? null);
         setSingleMode(!!profile.single_ride_mode);
       } catch (e) {
         Alert.alert("Error", apiError(e));
@@ -58,13 +59,17 @@ export default function SettingsScreen() {
   }, []);
 
   async function onSaveProfile() {
+    // A driver always has a vehicle. If the model is now empty, they picked a
+    // brand without choosing a model — block the save and tell them.
+    if (!vehicleTypeId) {
+      Alert.alert("Model required", "Please choose a vehicle model.");
+      return;
+    }
     setSavingProfile(true);
     try {
       // Only send changed user fields, then vehicle fields.
       await updateUserProfile({ full_name: fullName, email, phone_number: phone });
-      if (vehicleTypeId) {
-        await updateDriverProfile({ vehicle_type_id: vehicleTypeId, vehicle_color: color });
-      }
+      await updateDriverProfile({ vehicle_type_id: vehicleTypeId, vehicle_color: color });
       Alert.alert("Saved", "Your profile has been updated.");
     } catch (e) {
       Alert.alert("Could not save", apiError(e));
@@ -133,19 +138,12 @@ export default function SettingsScreen() {
         <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
         <Field label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
-        <Text style={styles.fieldLabel}>Vehicle</Text>
-        <View style={styles.chips}>
-          {vehicleTypes.map((t) => (
-            <Chip key={t.id} label={`${t.brand} ${t.model}`} active={t.id === vehicleTypeId} onPress={() => setVehicleTypeId(t.id)} />
-          ))}
-        </View>
+        {!loading ? (
+          <VehiclePicker modelId={vehicleTypeId} onChange={setVehicleTypeId} initialBrandId={initialBrandId} />
+        ) : null}
 
         <Text style={styles.fieldLabel}>Color</Text>
-        <View style={styles.chips}>
-          {COLOR_CHOICES.map((c) => (
-            <Chip key={c} label={c} active={c === color} onPress={() => setColor(c)} />
-          ))}
-        </View>
+        <ColorSwatches value={color} onChange={setColor} />
 
         <TouchableOpacity style={styles.btn} onPress={onSaveProfile} disabled={savingProfile}>
           {savingProfile ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save profile</Text>}
@@ -208,13 +206,6 @@ function Field({ label, ...props }) {
   );
 }
 
-function Chip({ label, active, onPress }) {
-  return (
-    <TouchableOpacity onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0f172a", padding: 18 },

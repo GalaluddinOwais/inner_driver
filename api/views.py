@@ -8,7 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from .models import Driver, Ride, VehicleType, Offer
+from .models import Driver, Ride, VehicleBrand, VehicleModel, Offer
 from .serializers import (
     DriverRegistrationSerializer,
     RiderRegistrationSerializer,
@@ -20,7 +20,8 @@ from .serializers import (
     RideRequestSerializer,
     RideSerializer,
     OfferSerializer,
-    VehicleTypeSerializer,
+    VehicleBrandSerializer,
+    VehicleModelSerializer,
     NearbyDriverSerializer
 )
 from .permissions import IsAdminUser, IsOwnerOrAdmin, IsRider, IsDriver
@@ -236,29 +237,50 @@ def update_driver_profile(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class VehicleTypeViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for listing and retrieving vehicle types.
-    Public (no authentication) so clients can obtain a valid
-    vehicle_type_id before driver registration.
+# Sort key that pushes a literal "Other" to the end while keeping the rest
+# alphabetical (annotate is_other = 1 for "Other", 0 otherwise; order by it first).
+from django.db.models import Case, When, IntegerField, Value
 
-    GET /api/vehicle-types/ - List all vehicle types
-    GET /api/vehicle-types/?brand__icontains=Toyota - Filter by brand
-    GET /api/vehicle-types/?search=Camry - Search brand/model
-    GET /api/vehicle-types/{id}/ - Get a specific vehicle type
+
+class VehicleBrandViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    queryset = VehicleType.objects.all()
-    serializer_class = VehicleTypeSerializer
+    Public list of vehicle brands for the brand picker ("Other" sorts last).
+    GET /api/vehicle-brands/
+    GET /api/vehicle-brands/?search=Toyota
+    """
+    serializer_class = VehicleBrandSerializer
     permission_classes = [AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    pagination_class = None  # full reference list — the picker needs every brand
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
 
+    def get_queryset(self):
+        return VehicleBrand.objects.annotate(
+            is_other=Case(When(name__iexact='Other', then=Value(1)), default=Value(0), output_field=IntegerField())
+        ).order_by('is_other', 'name')
+
+
+class VehicleModelViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Public list of vehicle models, filterable by brand ("Other" sorts last).
+    GET /api/vehicle-models/                 - all models
+    GET /api/vehicle-models/?brand=3         - models for brand id 3
+    GET /api/vehicle-models/?search=Camry    - search by model name
+    """
+    serializer_class = VehicleModelSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None  # full reference list — the picker needs every model
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = {
-        'brand': ['exact', 'icontains'],
-        'model': ['exact', 'icontains'],
+        'brand': ['exact'],
+        'name': ['exact', 'icontains'],
     }
-    ordering_fields = ['brand', 'model']
-    ordering = ['brand', 'model']
-    search_fields = ['brand', 'model']
+    search_fields = ['name', 'brand__name']
+
+    def get_queryset(self):
+        return VehicleModel.objects.select_related('brand').annotate(
+            is_other=Case(When(name__iexact='Other', then=Value(1)), default=Value(0), output_field=IntegerField())
+        ).order_by('brand__name', 'is_other', 'name')
 
 
 class DriverViewSet(viewsets.ReadOnlyModelViewSet):
@@ -273,15 +295,15 @@ class DriverViewSet(viewsets.ReadOnlyModelViewSet):
     GET /api/drivers/?ordering=-rating - Order by rating (descending)
     GET /api/drivers/{id}/ - Get specific driver details (uses DriverDetailSerializer - full data)
     """
-    queryset = Driver.objects.select_related('user', 'vehicle_type').all()
+    queryset = Driver.objects.select_related('user', 'vehicle_type', 'vehicle_type__brand').all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
 
     # Filter fields
     filterset_fields = {
         'vehicle_type': ['exact'],
-        'vehicle_type__brand': ['exact', 'icontains'],
-        'vehicle_type__model': ['exact', 'icontains'],
+        'vehicle_type__brand__name': ['exact', 'icontains'],
+        'vehicle_type__name': ['exact', 'icontains'],
         'vehicle_color': ['exact'],
         'rating': ['gte', 'lte', 'exact'],
         'is_available': ['exact'],

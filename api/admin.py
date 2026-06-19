@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Driver, Rider, OTP, VehicleType, Ride, Offer
+from .models import User, Driver, Rider, OTP, VehicleBrand, VehicleModel, Ride, Offer
 
 
 @admin.register(User)
@@ -59,11 +59,19 @@ class RiderAdmin(admin.ModelAdmin):
     get_phone_number.short_description = 'Phone Number'
 
 
-@admin.register(VehicleType)
-class VehicleTypeAdmin(admin.ModelAdmin):
-    list_display = ['brand', 'model']
-    search_fields = ['brand', 'model']
-    ordering = ['brand', 'model']
+@admin.register(VehicleBrand)
+class VehicleBrandAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    search_fields = ['name']
+    ordering = ['name']
+
+
+@admin.register(VehicleModel)
+class VehicleModelAdmin(admin.ModelAdmin):
+    list_display = ['brand', 'name']
+    list_filter = ['brand']
+    search_fields = ['name', 'brand__name']
+    ordering = ['brand__name', 'name']
 
 
 @admin.register(Ride)

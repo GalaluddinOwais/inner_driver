@@ -9,7 +9,8 @@ from .views import (
     get_current_user,
     update_driver_profile,
     DriverViewSet,
-    VehicleTypeViewSet,
+    VehicleBrandViewSet,
+    VehicleModelViewSet,
     list_rides,
     hide_ride,
     request_ride,
@@ -37,7 +38,8 @@ app_name = 'api'
 # Router for ViewSets
 router = DefaultRouter()
 router.register(r'drivers', DriverViewSet, basename='driver')
-router.register(r'vehicle-types', VehicleTypeViewSet, basename='vehicle-type')
+router.register(r'vehicle-brands', VehicleBrandViewSet, basename='vehicle-brand')
+router.register(r'vehicle-models', VehicleModelViewSet, basename='vehicle-model')
 
 urlpatterns = [
     # Registration endpoints

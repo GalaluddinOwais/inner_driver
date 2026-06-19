@@ -259,6 +259,9 @@ export default function HomeScreen({ navigation }) {
               // State accent: accepted = green, countered = canary yellow, plain offer = none.
               const stateColor = accepted ? STATE_COLORS.accepted : countered ? STATE_COLORS.countered : null;
               const stateText = accepted ? "Accepted" : countered ? "Countered" : null;
+              // "Brand Model" with any "Other" token dropped.
+              const vehicleLabel = (o.driver_vehicle || "")
+                .split(" ").filter((w) => w && w.toLowerCase() !== "other").join(" ").trim();
               return (
                 <View key={o.id} style={styles.offerCard}>
                   {/* Top row: price (left) + state label (right) */}
@@ -275,13 +278,16 @@ export default function HomeScreen({ navigation }) {
                       {stateText}
                     </Text>
                   </View>
-
-                  {/* km away, centered under the top row */}
+  
+                  {/* vehicle (icon + brand·model) and km away, centered under the top row */}
                   <View style={styles.kmRow}>
                     <Ionicons name={o.driver_single_ride_mode ? "car-sport" : "bus"} size={16} color="#e2e8f0" />
-                    <Text style={styles.offerMeta}>
-                      {o.driver_distance_km != null ? `${o.driver_distance_km} km away` : "distance unknown"}
-                    </Text>
+                    {vehicleLabel ? <Text style={styles.vehicleLabel}>{vehicleLabel}</Text> : null}
+                    {o.driver_distance_km != null ? (
+                      <Text style={styles.offerMeta}>
+                        {vehicleLabel ? `   ${o.driver_distance_km} km away` : `${o.driver_distance_km} km away`}
+                      </Text>
+                    ) : null}
                   </View>
 
                   {accepted ? (
@@ -492,7 +498,8 @@ const styles = StyleSheet.create({
   offerCard: { backgroundColor: "#0f172a", borderRadius: 12, padding: 14, marginBottom: 10 },
   offerPrice: { color: "#22c55e", fontSize: 18, fontWeight: "800" },
   priceStrike: { textDecorationLine: "line-through", fontWeight: "800", fontSize: 18 },
-  offerMeta: { color: "#94a3b8", fontSize: 13 },
+  offerMeta: { color: "#94a3b8", fontSize: 13 ,fontWeight: "700"},
+  vehicleLabel: { color: "#e2e8f0", fontSize: 14, fontWeight: "700" },
   offerState: { color: "#e2e8f0", fontSize: 16, fontWeight: "800" },
   kmRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10 },
   declineBtn: { backgroundColor: "rgba(239,68,68,0.15)" },

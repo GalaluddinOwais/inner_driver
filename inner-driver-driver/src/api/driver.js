@@ -67,9 +67,16 @@ export async function verifyPasswordChange(otp_code, new_password, new_password_
   return data;
 }
 
-// --- Vehicle types (public, for signup dropdown) ---
-export async function listVehicleTypes() {
-  const { data } = await api.get("/vehicle-types/");
+// --- Vehicle brands & models (public, for signup/settings pickers) ---
+export async function listVehicleBrands() {
+  const { data } = await api.get("/vehicle-brands/");
+  return Array.isArray(data) ? data : data.results ?? [];
+}
+
+// Models for a given brand id. The chosen model's id is what's saved as the
+// driver's vehicle (vehicle_type_id). Each item: { id, brand, brand_id, model }.
+export async function listVehicleModels(brandId) {
+  const { data } = await api.get("/vehicle-models/", { params: { brand: brandId } });
   return Array.isArray(data) ? data : data.results ?? [];
 }
 

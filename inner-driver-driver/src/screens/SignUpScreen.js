@@ -3,35 +3,20 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator, Alert,
 } from "react-native";
-import { registerDriver, getMe, listVehicleTypes } from "../api/driver";
+import { registerDriver, getMe } from "../api/driver";
 import { apiError } from "../api/client";
 import { COLOR_CHOICES } from "../config";
+import { VehiclePicker, ColorSwatches } from "./VehiclePicker";
 
 export default function SignUpScreen({ navigation }) {
   const [form, setForm] = useState({
     full_name: "", email: "", phone_number: "", password: "", password_confirm: "",
   });
-  const [vehicleTypes, setVehicleTypes] = useState([]);
-  const [vehicleTypeId, setVehicleTypeId] = useState(null);
-  const [color, setColor] = useState("black");
-  const [loadingTypes, setLoadingTypes] = useState(true);
+  const [vehicleTypeId, setVehicleTypeId] = useState(null); // selected VehicleModel id
+  const [color, setColor] = useState(COLOR_CHOICES[0].hex);
   const [busy, setBusy] = useState(false);
 
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const types = await listVehicleTypes();
-        setVehicleTypes(types);
-        if (types.length) setVehicleTypeId(types[0].id);
-      } catch (e) {
-        Alert.alert("Could not load vehicle types", apiError(e));
-      } finally {
-        setLoadingTypes(false);
-      }
-    })();
-  }, []);
 
   async function onSubmit() {
     if (!form.email || !form.password || !form.full_name) {
@@ -43,7 +28,7 @@ export default function SignUpScreen({ navigation }) {
       return;
     }
     if (!vehicleTypeId) {
-      Alert.alert("Vehicle", "Pick a vehicle type.");
+      Alert.alert("Vehicle", "Pick your vehicle brand and model.");
       return;
     }
     setBusy(true);
@@ -78,31 +63,10 @@ export default function SignUpScreen({ navigation }) {
       <Field label="Password" value={form.password} onChangeText={set("password")} secureTextEntry />
       <Field label="Confirm password" value={form.password_confirm} onChangeText={set("password_confirm")} secureTextEntry />
 
-      <Text style={styles.label}>Vehicle type</Text>
-      {loadingTypes ? (
-        <ActivityIndicator color="#38bdf8" style={{ marginVertical: 10 }} />
-      ) : (
-        <View style={styles.chips}>
-          {vehicleTypes.map((t) => (
-            <Chip
-              key={t.id}
-              label={`${t.brand} ${t.model}`}
-              active={t.id === vehicleTypeId}
-              onPress={() => setVehicleTypeId(t.id)}
-            />
-          ))}
-          {vehicleTypes.length === 0 && (
-            <Text style={styles.hint}>No vehicle types on the server yet.</Text>
-          )}
-        </View>
-      )}
+      <VehiclePicker modelId={vehicleTypeId} onChange={setVehicleTypeId} />
 
       <Text style={styles.label}>Vehicle color</Text>
-      <View style={styles.chips}>
-        {COLOR_CHOICES.map((c) => (
-          <Chip key={c} label={c} active={c === color} onPress={() => setColor(c)} />
-        ))}
-      </View>
+      <ColorSwatches value={color} onChange={setColor} />
 
       <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={busy}>
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign up</Text>}
@@ -124,13 +88,6 @@ function Field({ label, ...props }) {
   );
 }
 
-function Chip({ label, active, onPress }) {
-  return (
-    <TouchableOpacity onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0f172a", padding: 24 },

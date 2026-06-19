@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from api.models import Driver, Rider, VehicleType, Ride
+from api.models import Driver, Rider, VehicleBrand, VehicleModel, Ride
 from decimal import Decimal
 
 User = get_user_model()
@@ -12,28 +12,64 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS('Starting to populate fake data...'))
 
-        # Create Vehicle Types
-        self.stdout.write('Creating vehicle types...')
-        vehicle_types = []
+        # Create Vehicle Brands + Models
+        self.stdout.write('Creating vehicle brands & models...')
+        vehicle_models = []  # flat list, used by drivers below
 
-        vehicle_data = [
-            ('Toyota', 'Camry'),
-            ('Honda', 'Accord'),
-            ('Toyota', 'Corolla'),
-            ('BMW', 'X5'),
-            ('Mercedes', 'C-Class'),
-        ]
+        catalog = {
+            # --- The Market Kings (Top Selling / Most Common) ---
+            'Nissan': ['Sunny', 'Sentra', 'Qashqai', 'Juke', 'X-Trail','Other'],
+            'Hyundai': ['Verna', 'Elantra', 'Tucson', 'Accent', 'Matrix', 'Creta', 'I10','Other'],
+            'Chery': ['Tiggo 3', 'Tiggo 4 Pro', 'Tiggo 7', 'Tiggo 8', 'Arrizo 5', 'Envy', 'Other'],
+            'MG': ['MG 5', 'MG ZS', 'MG 6', 'MG RX5', 'MG HS', 'MG GT'],
+            
+            # --- Japanese Staples ---
+            'Toyota': ['Corolla', 'Yaris', 'Hilux', 'Fortuner', 'Belta', 'Rumion','Other'],
+            'Mitsubishi': ['Lancer', 'Xpander', 'Eclipse Cross', 'Attrage', 'Mirage','Other'],
+            'Suzuki': ['Swift', 'Maruti', 'Alto', 'Ciaz', 'Ertiga', 'Dzire', 'Baleno','Other'],
 
-        for brand, model in vehicle_data:
-            vehicle_type, created = VehicleType.objects.get_or_create(
-                brand=brand,
-                model=model
-            )
-            vehicle_types.append(vehicle_type)
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'  [+] Created: {brand} {model}'))
-            else:
-                self.stdout.write(f'  [-] Already exists: {brand} {model}')
+            # --- Korean Twins ---
+            'Kia': ['Cerato', 'Sportage', 'Rio', 'Picanto', 'Carens', 'Xceed','Other'],
+
+            # --- American & Commercial ---
+            'Chevrolet': ['Optra', 'Aveo', 'Cruze', 'T-Series', 'Lanos', 'Captiva','Other'], 
+
+            # --- European Mainstays ---
+            'Renault': ['Logan', 'Duster', 'Sandero', 'Stepway', 'Megane', 'Kadjar','Other'],
+            'Peugeot': ['301', '3008', '5008', '2008', '508','Other'],
+            'Fiat': ['Shahin', 'Tipo', '500', 'Punto'],
+            'Opel': ['Astra', 'Insignia', 'Corsa', 'Crossland', 'Grandland','Other'],
+            'Skoda': ['Octavia', 'Superb', 'Kodiaq', 'A7','Other'],
+            'Volkswagen': ['Passat', 'Golf', 'Tiguan', 'Jetta','Other'],
+            'Seat': ['Ibiza', 'Leon', 'Ateca', 'Tarraco','Other'],
+
+            # --- Premium Segment ---
+            'Mercedes': ['C-Class', 'E-Class', 'A-Class', 'GLC', 'CLA','Other'],
+            'BMW': ['3 Series', '5 Series', 'X3', 'X5', '320i','Other'],
+
+            # --- New Chinese Wave (Rapidly growing in Egypt) ---
+            'BYD': ['F3', 'Atto 3'],
+            'Jetour': ['X70', 'X90 Plus', 'Dashing','Other'],
+            'Geely': ['Coolray', 'Emgrand', 'Okavango','Other'],
+            'BAIC': ['X35', 'BJ40','Other'],
+            'Soueast': ['DX3', 'DX7','Other'],
+
+            # --- Egyptian Classics & Older Used Market ---
+            'Daewoo': ['Lanos', 'Nubira','Other'],
+            'Lada': ['2107', 'Granta','Other'],
+            
+            # --- Fallback ---
+            'Other': ['Other'],  # global fallback brand
+        }
+
+        for brand_name, models in catalog.items():
+            brand, _ = VehicleBrand.objects.get_or_create(name=brand_name)
+            # Every brand gets an "Other" model for vehicles not in the catalog.
+            for model_name in [*models, 'Other']:
+                vm, created = VehicleModel.objects.get_or_create(brand=brand, name=model_name)
+                vehicle_models.append(vm)
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f'  [+] Created: {brand_name} {model_name}'))
 
         # Create Drivers
         self.stdout.write('\nCreating drivers...')
@@ -44,8 +80,8 @@ class Command(BaseCommand):
                 'password': '123',
                 'full_name': 'Galaluddin Owais',
                 'phone_number': '+201234567890',
-                'vehicle_type': vehicle_types[0],  # Toyota Camry
-                'vehicle_color': 'black',
+                'vehicle_type': vehicle_models[0],
+                'vehicle_color': '#111827',  # black
                 'balance': 500.00,
                 'is_available': True,
             },
@@ -54,8 +90,8 @@ class Command(BaseCommand):
                 'password': '123',
                 'full_name': 'Ahmed Hassan',
                 'phone_number': '+201234567891',
-                'vehicle_type': vehicle_types[1],  # Honda Accord
-                'vehicle_color': 'white',
+                'vehicle_type': vehicle_models[1],
+                'vehicle_color': '#FFFFFF',  # white
                 'balance': 300.00,
                 'is_available': True,
             },
@@ -64,8 +100,8 @@ class Command(BaseCommand):
                 'password': '123',
                 'full_name': 'Mohamed Ali',
                 'phone_number': '+201234567892',
-                'vehicle_type': vehicle_types[2],  # Toyota Corolla
-                'vehicle_color': 'silver',
+                'vehicle_type': vehicle_models[2],
+                'vehicle_color': '#C0C0C0',  # silver
                 'balance': 400.00,
                 'is_available': False,
             },
@@ -191,7 +227,7 @@ class Command(BaseCommand):
         self.stdout.write('='*60)
 
         self.stdout.write('\n[SUMMARY]:')
-        self.stdout.write(f'  - Vehicle Types: {VehicleType.objects.count()}')
+        self.stdout.write(f'  - Vehicle Brands: {VehicleBrand.objects.count()}  Models: {VehicleModel.objects.count()}')
         self.stdout.write(f'  - Drivers: {Driver.objects.count()}')
         self.stdout.write(f'  - Riders: {Rider.objects.count()}')
         self.stdout.write(f'  - Rides: {Ride.objects.count()}')

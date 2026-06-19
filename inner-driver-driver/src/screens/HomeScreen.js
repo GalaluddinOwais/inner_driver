@@ -531,11 +531,13 @@ export default function HomeScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
-              {/* Info line under the route */}
+              {/* Info line under the route (omit unknown parts, no dangling dots) */}
               <Text style={styles.reqMeta}>
-                {km != null ? `${km.toFixed(1)} km away` : "distance unknown"}
-                {tripKm != null ? ` · ${tripKm.toFixed(1)} km trip` : ""}
-                {" · "}{item.offers_count} offer{item.offers_count === 1 ? "" : "s"}
+                {[
+                  km != null ? `${km.toFixed(1)} km away` : null,
+                  tripKm != null ? `${tripKm.toFixed(1)} km trip` : null,
+                  `${item.offers_count} offer${item.offers_count === 1 ? "" : "s"}`,
+                ].filter(Boolean).join(" · ")}
               </Text>
 
               {/* Offer state actions. A driver only makes an offer (and may
