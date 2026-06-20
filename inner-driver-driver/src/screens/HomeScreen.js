@@ -6,7 +6,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import {
   getDriverProfile, setAvailability, recharge,
-  listOpenRequests, listMyRides, createOffer, hideRide,
+  listOpenRequests, listMyRides, createOffer, hideRide, rateRide,
   confirmRide, withdrawOffer,
   logout,
 } from "../api/driver";
@@ -15,6 +15,7 @@ import { connectNotifications } from "../ws/notifications";
 import { captureAndSendLocation, captureSendAndGeocode, getCurrentAddress, haversineKm } from "../location";
 import PromptModal from "./PromptModal";
 import LocationModal from "./LocationModal";
+import RatingModal from "./RatingModal";
 
 const LOCATION_INTERVAL_MS = 10000; // push GPS every 10s while on a confirmed ride
 const ADDRESS_INTERVAL_MS = 30000;  // silently refresh the shown address every 30s
@@ -48,6 +49,7 @@ export default function HomeScreen({ navigation }) {
   // prompt: { kind: 'recharge' | 'offer', ride? }  (null = hidden)
   const [prompt, setPrompt] = useState(null);
   const [locModal, setLocModal] = useState(null); // { title, latitude, longitude, address? } | null
+  const [ratingRide, setRatingRide] = useState(null); // ride to rate the rider for (after clear)
   const wsRef = useRef(null);
 
   // Load profile + open requests + my assigned rides.
@@ -202,14 +204,23 @@ export default function HomeScreen({ navigation }) {
   }
 
   async function onDone(ride) {
-    // Hide the ride from the driver's list (status stays confirmed).
+    // Optimistic: remove the card AND show the rating prompt immediately, then
+    // fire the hide request in the background (no waiting on the round-trip).
     setActiveRides((prev) => prev.filter((r) => r.id !== ride.id));
+    setRatingRide(ride);
     try {
       await hideRide(ride.id);
     } catch (e) {
       Alert.alert("Could not finish", apiError(e));
       loadAll();
     }
+  }
+
+  async function submitRiderRating(score) {
+    const ride = ratingRide;
+    setRatingRide(null);
+    if (!ride || !score) return;
+    try { await rateRide(ride.id, score); } catch {}
   }
 
   async function onToggleAvailability(value) {
@@ -382,8 +393,8 @@ export default function HomeScreen({ navigation }) {
                         ) : null}
                       </View>
 
-                      {/* Rider name + phone (side by side) only visible once confirmed */}
-                      {confirmed && (ride.rider_name || ride.rider_phone) ? (
+                      {/* Rider name + phone (side by side); shown on confirmed and cancelled */}
+                      {(confirmed || cancelled) && (ride.rider_name || ride.rider_phone) ? (
                         <View style={styles.riderRow}>
                           {ride.rider_name ? (
                             <View style={styles.riderItem}>
@@ -602,6 +613,15 @@ export default function HomeScreen({ navigation }) {
         longitude={locModal?.longitude}
         address={locModal?.address}
         onClose={() => setLocModal(null)}
+      />
+
+      <RatingModal
+        visible={!!ratingRide}
+        title="Rate your rider"
+        subtitle={ratingRide?.rider_name || undefined}
+        destination={ratingRide?.dropoff_location || undefined}
+        onSubmit={submitRiderRating}
+        onIgnore={() => setRatingRide(null)}
       />
     </View>
   );

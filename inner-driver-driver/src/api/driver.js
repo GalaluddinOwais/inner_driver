@@ -147,3 +147,9 @@ export async function hideRide(rideId) {
   const { data } = await api.post(`/rides/${rideId}/hide/`);
   return data;
 }
+
+// Driver rates the rider on a ride (1-5). Ignorable on the client (don't call).
+export async function rateRide(rideId, score) {
+  const { data } = await api.post(`/rides/${rideId}/rate/`, { score });
+  return data;
+}

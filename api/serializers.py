@@ -328,21 +328,23 @@ class RideSerializer(serializers.ModelSerializer):
                   'offers_count', 'is_hidden', 'created_at']
         read_only_fields = ['id', 'rider', 'driver', 'status', 'final_price', 'created_at']
 
+    # Contact details are shared once the parties are committed (confirmed) and
+    # remain visible on a cancelled ride that HAD a driver, so the cancelled card
+    # can still show who it was (and the rating prompt can name them).
+    def _contact_visible(self, obj):
+        return obj.driver_id is not None and obj.status in ('confirmed', 'cancelled')
+
     def get_rider_name(self, obj):
-        return obj.rider.user.full_name if obj.status == 'confirmed' else None
+        return obj.rider.user.full_name if self._contact_visible(obj) else None
 
     def get_rider_phone(self, obj):
-        return obj.rider.user.phone_number if obj.status == 'confirmed' else None
+        return obj.rider.user.phone_number if self._contact_visible(obj) else None
 
     def get_driver_name(self, obj):
-        if obj.status == 'confirmed' and obj.driver:
-            return obj.driver.user.full_name
-        return None
+        return obj.driver.user.full_name if self._contact_visible(obj) else None
 
     def get_driver_phone(self, obj):
-        if obj.status == 'confirmed' and obj.driver:
-            return obj.driver.user.phone_number
-        return None
+        return obj.driver.user.phone_number if self._contact_visible(obj) else None
 
     def get_driver_latitude(self, obj):
         return obj.driver.current_latitude if (obj.status == 'confirmed' and obj.driver) else None

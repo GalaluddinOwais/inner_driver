@@ -94,6 +94,27 @@ export async function cancelRide(rideId) {
   return data;
 }
 
+// --- Ratings ---
+// Rider rates the driver immediately (e.g. after cancelling a confirmed ride).
+export async function rateRide(rideId, score) {
+  const { data } = await api.post(`/rides/${rideId}/rate/`, { score });
+  return data;
+}
+
+// Pending rating prompts (driver ended a confirmed ride). [{ id, ride, driver_name }]
+export async function listPendingRatings() {
+  const { data } = await api.get("/ratings/pending/");
+  return Array.isArray(data) ? data : data.results ?? [];
+}
+
+// Resolve a pending request: pass a score to rate, or omit to ignore. Either
+// way it's marked done so it won't reappear.
+export async function resolveRating(ratingId, score) {
+  const body = score ? { score } : {};
+  const { data } = await api.post(`/ratings/${ratingId}/resolve/`, body);
+  return data;
+}
+
 
 // --- Offers on my request ---
 export async function listOffers(rideId) {

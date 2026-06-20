@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getMe, logout, listNearbyDrivers, requestRide, listMyRides,
   cancelRide, listOffers, counterOffer, acceptOffer, declineOffer,
+  rateRide, listPendingRatings, resolveRating,
 } from "../api/rider";
 import { apiError } from "../api/client";
 import { connectNotifications } from "../ws/notifications";
@@ -15,6 +16,7 @@ import { getCurrentLocation, haversineKm, reverseGeocode } from "../location";
 import DiscoverMap from "./DiscoverMap";
 import PromptModal from "./PromptModal";
 import LocationModal from "./LocationModal";
+import RatingModal from "./RatingModal";
 
 const DRIVER_LIVE_INTERVAL_MS = 10000; // poll the assigned driver's location every 10s
 const NEARBY_POLL_INTERVAL_MS = 5000; // refresh nearby drivers every 60s on the discovery screen
@@ -37,6 +39,8 @@ export default function HomeScreen({ navigation }) {
   const [prompt, setPrompt] = useState(null); // { kind: 'price' | 'counter', offer? }
   const [driverAddress, setDriverAddress] = useState(null); // geocoded from driver's live coords
   const [locModal, setLocModal] = useState(null); // { title, latitude, longitude, address? } | null
+  const [cancelRating, setCancelRating] = useState(null); // ride to rate the driver for (after cancel)
+  const [pendingRatings, setPendingRatings] = useState([]); // queued driver-rating prompts (one at a time)
 
   const wsRef = useRef(null);
   const liveTimer = useRef(null);
@@ -79,6 +83,8 @@ export default function HomeScreen({ navigation }) {
     } catch (e) {
       Alert.alert("Error", apiError(e));
     }
+    // Refresh the pending driver-rating prompts (queued, shown one at a time).
+    try { setPendingRatings(await listPendingRatings()); } catch {}
   }, [riderLoc]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -180,11 +186,38 @@ export default function HomeScreen({ navigation }) {
       {
         text: "Yes, cancel", style: "destructive",
         onPress: async () => {
-          try { await cancelRide(activeRide.id); await refresh(); }
+          // Snapshot BEFORE cancel/refresh (refresh() clears activeRide).
+          const wasConfirmed = activeRide.status === "confirmed";
+          const driverName = activeRide.driver_name || null;
+          const destination = activeRide.dropoff_location || null;
+          const rideId = activeRide.id;
+          try {
+            await cancelRide(rideId);
+            // Open the rate-driver prompt first, then refresh in the background.
+            if (wasConfirmed) setCancelRating({ id: rideId, driverName, destination });
+            await refresh();
+          }
           catch (e) { Alert.alert("Could not cancel", apiError(e)); }
         },
       },
     ]);
+  }
+
+  async function submitDriverRating(score) {
+    const r = cancelRating;
+    setCancelRating(null);
+    if (!r || !score) return;
+    try { await rateRide(r.id, score); } catch {}
+  }
+
+  // Resolve the head of the pending-rating queue (rate the driver, or ignore).
+  // Either way the request is marked done server-side and popped locally so the
+  // next one (if any) shows.
+  async function resolvePendingRating(score) {
+    const head = pendingRatings[0];
+    if (!head) return;
+    setPendingRatings((q) => q.slice(1));
+    try { await resolveRating(head.id, score); } catch {}
   }
 
   function onDriverArrived() {
@@ -436,6 +469,27 @@ export default function HomeScreen({ navigation }) {
         longitude={locModal?.longitude}
         address={locModal?.address}
         onClose={() => setLocModal(null)}
+      />
+
+      {/* Rate the driver after cancelling a confirmed ride. */}
+      <RatingModal
+        visible={!!cancelRating}
+        title="Rate your driver"
+        subtitle={cancelRating?.driverName || undefined}
+        destination={cancelRating?.destination || undefined}
+        onSubmit={submitDriverRating}
+        onIgnore={() => setCancelRating(null)}
+      />
+
+      {/* Pending driver-rating prompts (driver ended the ride). One at a time;
+          hidden while the cancel-rating modal is up to avoid overlap. */}
+      <RatingModal
+        visible={!cancelRating && pendingRatings.length > 0}
+        title="Rate your driver"
+        subtitle={pendingRatings[0]?.driver_name || undefined}
+        destination={pendingRatings[0]?.destination || undefined}
+        onSubmit={resolvePendingRating}
+        onIgnore={() => resolvePendingRating(null)}
       />
     </View>
   );

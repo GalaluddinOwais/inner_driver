@@ -435,6 +435,29 @@ def nearby_drivers(request):
     return Response(NearbyDriverSerializer(drivers, many=True).data, status=status.HTTP_200_OK)
 
 
+# Confirmed rides older than this (since created_at) are auto-cleared for the
+# driver, as if they'd tapped "Done, clear".
+STALE_RIDE_HOURS = 24
+
+
+def _auto_clear_stale_rides(driver):
+    """Hide this driver's confirmed, not-hidden rides older than STALE_RIDE_HOURS
+    and queue a rating request for the rider on each — same effect as the driver
+    manually clearing a finished ride. Cheap: scoped to one driver's old rides."""
+    from django.utils import timezone
+    from datetime import timedelta
+    from .models import RatingRequest
+
+    cutoff = timezone.now() - timedelta(hours=STALE_RIDE_HOURS)
+    stale = Ride.objects.filter(
+        driver=driver, status='confirmed', is_hidden=False, created_at__lt=cutoff,
+    ).select_related('rider')
+    for ride in stale:
+        ride.is_hidden = True
+        ride.save(update_fields=['is_hidden'])
+        RatingRequest.objects.get_or_create(ride=ride, rider=ride.rider, driver=driver)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_rides(request):
@@ -452,6 +475,10 @@ def list_rides(request):
     if hasattr(user, 'rider_profile'):
         rides = Ride.objects.filter(rider__user=user)
     elif hasattr(user, 'driver_profile'):
+        # Auto-clear this driver's stale confirmed rides (>24h) before listing —
+        # as if they'd tapped "Done, clear" (hides the ride + queues a rating
+        # request for the rider). Runs lazily when the driver loads their rides.
+        _auto_clear_stale_rides(user.driver_profile)
         rides = Ride.objects.filter(driver__user=user)
     else:
         return Response({'error': 'User has no driver or rider profile'},
@@ -502,7 +529,126 @@ def hide_ride(request, ride_id):
 
     ride.is_hidden = True
     ride.save(update_fields=['is_hidden'])
+
+    # When the DRIVER ends a CONFIRMED ride ("Done, clear"), queue a pending
+    # rating request so the rider gets prompted to rate this driver later.
+    is_driver = ride.driver and ride.driver.user_id == request.user.id
+    if is_driver and ride.status == 'confirmed' and ride.driver_id:
+        from .models import RatingRequest
+        RatingRequest.objects.get_or_create(
+            ride=ride, rider=ride.rider, driver=ride.driver,
+        )
+
     return Response({'message': 'Ride hidden', 'id': ride.id}, status=status.HTTP_200_OK)
+
+
+def _score_from_request(request):
+    """Parse + validate a 1-5 integer score from the request body. Returns
+    (score, error_response). score is None when the user ignored (no/blank score)."""
+    raw = request.data.get('score', None)
+    if raw in (None, ''):
+        return None, None  # ignored
+    try:
+        score = int(raw)
+    except (TypeError, ValueError):
+        return None, Response({'error': 'score must be an integer 1-5'}, status=status.HTTP_400_BAD_REQUEST)
+    if score < 1 or score > 5:
+        return None, Response({'error': 'score must be between 1 and 5'}, status=status.HTTP_400_BAD_REQUEST)
+    return score, None
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rate_ride(request, ride_id):
+    """
+    Submit an IMMEDIATE rating for the other party on a ride.
+      - Driver rates the rider (after "Done, clear" / "Clear").
+      - Rider rates the driver (after cancelling a confirmed ride).
+    Body: { "score": 1..5 }. Ignorable on the client (it just doesn't call this).
+    The score updates the ratee's running average; nothing is stored per-rating.
+    POST /api/rides/<ride_id>/rate/
+    """
+    from .models import apply_rating
+    try:
+        ride = Ride.objects.select_related('rider__user', 'driver__user').get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response({'error': 'Ride not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    score, err = _score_from_request(request)
+    if err:
+        return err
+    if score is None:
+        return Response({'message': 'No score given'}, status=status.HTTP_200_OK)
+
+    uid = request.user.id
+    if ride.driver and ride.driver.user_id == uid:
+        # Driver is rating the rider.
+        apply_rating(ride.rider, score)
+        target = 'rider'
+    elif ride.rider.user_id == uid:
+        # Rider is rating the driver.
+        if not ride.driver_id:
+            return Response({'error': 'This ride has no driver to rate'}, status=status.HTTP_400_BAD_REQUEST)
+        apply_rating(ride.driver, score)
+        target = 'driver'
+    else:
+        return Response({'error': 'This ride does not belong to you'}, status=status.HTTP_403_FORBIDDEN)
+
+    return Response({'message': f'Rated the {target}', 'score': score}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsRider])
+def list_pending_ratings(request):
+    """
+    The rider's pending rating prompts (driver ended a confirmed ride). The app
+    shows these one at a time. Each: { id, ride, driver_name }.
+    GET /api/ratings/pending/
+    """
+    from .models import RatingRequest
+    rider = request.user.rider_profile
+    qs = (RatingRequest.objects
+          .filter(rider=rider, is_done=False)
+          .select_related('driver__user', 'ride')
+          .order_by('created_at'))
+    data = [{
+        'id': rr.id,
+        'ride': rr.ride_id,
+        'driver_name': rr.driver.user.full_name,
+        'destination': rr.ride.dropoff_location or None,
+    } for rr in qs]
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsRider])
+def resolve_rating(request, rating_id):
+    """
+    Resolve a pending rating request: rate the driver (1-5) OR ignore. Either
+    way it becomes is_done so it won't show again. If a score is given, it's
+    folded into the driver's running average (not stored on the request).
+    Body: { "score": 1..5 } to rate, or omit/blank to ignore.
+    POST /api/ratings/<rating_id>/resolve/
+    """
+    from .models import RatingRequest, apply_rating
+    rider = request.user.rider_profile
+    try:
+        rr = RatingRequest.objects.select_related('driver').get(id=rating_id, rider=rider)
+    except RatingRequest.DoesNotExist:
+        return Response({'error': 'Rating request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if rr.is_done:
+        return Response({'message': 'Already resolved'}, status=status.HTTP_200_OK)
+
+    score, err = _score_from_request(request)
+    if err:
+        return err
+    if score is not None:
+        apply_rating(rr.driver, score)
+
+    rr.is_done = True
+    rr.save(update_fields=['is_done'])
+    return Response({'message': 'Resolved', 'rated': score is not None}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Driver, Rider, OTP, VehicleBrand, VehicleModel, Ride, Offer
+from .models import User, Driver, Rider, OTP, VehicleBrand, VehicleModel, Ride, Offer, RatingRequest
 
 
 @admin.register(User)
@@ -104,6 +104,14 @@ class OfferAdmin(admin.ModelAdmin):
     def get_driver_name(self, obj):
         return obj.driver.user.full_name
     get_driver_name.short_description = 'Driver'
+
+
+@admin.register(RatingRequest)
+class RatingRequestAdmin(admin.ModelAdmin):
+    list_display = ['id', 'ride', 'rider', 'driver', 'is_done', 'created_at']
+    list_filter = ['is_done', 'created_at']
+    search_fields = ['rider__user__full_name', 'driver__user__full_name', 'ride__id']
+    readonly_fields = ['created_at']
 
 
 @admin.register(OTP)

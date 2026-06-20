@@ -151,6 +151,9 @@ class Driver(models.Model):
     single_ride_mode = models.BooleanField(default=True, help_text="One ride at a time: auto-decline other offers on confirm")
     total_rides = models.PositiveIntegerField(default=0)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    # Internal: number of ratings averaged into `rating` (for correct running
+    # average). Not exposed in the API — visibility is gated on total_rides.
+    ratings_count = models.PositiveIntegerField(default=0)
 
     # Location tracking fields
     current_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Current latitude coordinate")
@@ -176,9 +179,30 @@ class Rider(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='rider_profile')
     total_rides = models.PositiveIntegerField(default=0)
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    # Internal: number of ratings averaged into `rating` (not exposed in the API).
+    ratings_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"Rider: {self.user.full_name}"
+
+
+def apply_rating(profile, score):
+    """Fold a new 1-5 `score` into a Driver/Rider profile's running average.
+    new_avg = (old_avg * count + score) / (count + 1). Saves rating + ratings_count."""
+    from decimal import Decimal, ROUND_HALF_UP
+    try:
+        score = int(score)
+    except (TypeError, ValueError):
+        return
+    if score < 1 or score > 5:
+        return
+    count = profile.ratings_count or 0
+    old = Decimal(profile.rating or 0)
+    new_avg = (old * count + score) / (count + 1)
+    profile.rating = new_avg.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    profile.ratings_count = count + 1
+    profile.save(update_fields=['rating', 'ratings_count'])
 
 
 class Ride(models.Model):
@@ -244,6 +268,30 @@ class Offer(models.Model):
 
     def __str__(self):
         return f"Offer #{self.id} on Ride #{self.ride_id} by {self.driver.user.full_name} - ${self.price} ({self.status})"
+
+
+class RatingRequest(models.Model):
+    """
+    A pending prompt for the RIDER to rate the DRIVER of a finished ride.
+    Created when the driver ends a confirmed ride ("Done, clear"). The rider
+    sees not-done requests in their app and can rate (1-5) or ignore — either
+    way it becomes is_done so it never re-appears. The score is NOT stored here;
+    it's applied directly to the driver's running average on resolve.
+    """
+    ride = models.ForeignKey(Ride, on_delete=models.CASCADE, related_name='rating_requests')
+    rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name='rating_requests')
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, related_name='rating_requests')
+    is_done = models.BooleanField(default=False, help_text="Rated or ignored — no longer shown")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        # One rating prompt per ride (a finished ride asks the rider once).
+        unique_together = ['ride', 'rider', 'driver']
+
+    def __str__(self):
+        state = 'done' if self.is_done else 'pending'
+        return f"RatingRequest ride#{self.ride_id}: {self.rider.user.full_name} -> {self.driver.user.full_name} ({state})"
 
 
 class OTP(models.Model):
