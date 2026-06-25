@@ -332,7 +332,7 @@ class RideSerializer(serializers.ModelSerializer):
     # remain visible on a cancelled ride that HAD a driver, so the cancelled card
     # can still show who it was (and the rating prompt can name them).
     def _contact_visible(self, obj):
-        return obj.driver_id is not None and obj.status in ('confirmed', 'cancelled')
+        return obj.driver_id is not None and obj.status in ('confirmed', 'arrived', 'cancelled')
 
     def get_rider_name(self, obj):
         return obj.rider.user.full_name if self._contact_visible(obj) else None

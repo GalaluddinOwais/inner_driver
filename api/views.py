@@ -450,7 +450,8 @@ def _auto_clear_stale_rides(driver):
 
     cutoff = timezone.now() - timedelta(hours=STALE_RIDE_HOURS)
     stale = Ride.objects.filter(
-        driver=driver, status='confirmed', is_hidden=False, created_at__lt=cutoff,
+        driver=driver, status__in=('confirmed', 'arrived'), is_hidden=False,
+        created_at__lt=cutoff,
     ).select_related('rider')
     for ride in stale:
         ride.is_hidden = True
@@ -522,18 +523,18 @@ def hide_ride(request, ride_id):
     if not is_party:
         return Response({'error': 'This ride does not belong to you'}, status=status.HTTP_403_FORBIDDEN)
 
-    if ride.status not in ('confirmed', 'cancelled'):
+    if ride.status not in ('confirmed', 'arrived', 'cancelled'):
         return Response({
-            'error': f'Only a confirmed or cancelled ride can be cleared (this one is {ride.status})'
+            'error': f'Only a confirmed, arrived or cancelled ride can be cleared (this one is {ride.status})'
         }, status=status.HTTP_400_BAD_REQUEST)
 
     ride.is_hidden = True
     ride.save(update_fields=['is_hidden'])
 
-    # When the DRIVER ends a CONFIRMED ride ("Done, clear"), queue a pending
-    # rating request so the rider gets prompted to rate this driver later.
+    # When the DRIVER ends a CONFIRMED/ARRIVED ride ("Done, clear"), queue a
+    # pending rating request so the rider gets prompted to rate this driver later.
     is_driver = ride.driver and ride.driver.user_id == request.user.id
-    if is_driver and ride.status == 'confirmed' and ride.driver_id:
+    if is_driver and ride.status in ('confirmed', 'arrived') and ride.driver_id:
         from .models import RatingRequest
         RatingRequest.objects.get_or_create(
             ride=ride, rider=ride.rider, driver=ride.driver,
@@ -1131,6 +1132,13 @@ def cancel_ride(request, ride_id):
     ride.status = 'cancelled'
     ride.save(update_fields=['status'])
     ride.offers.exclude(status='declined').update(status='declined')
+
+    # Undo the ride count: only a 'confirmed' ride was counted (confirm_ride
+    # increments total_rides). 'assigned' was never counted, so leave it.
+    if prev_status == 'confirmed' and ride.driver:
+        ride.driver.total_rides = max(0, ride.driver.total_rides - 1)
+        ride.driver.save(update_fields=['total_rides'])
+
     response_serializer = RideSerializer(ride)
 
     if driver_user_id:
@@ -1149,6 +1157,45 @@ def cancel_ride(request, ride_id):
         )
 
     return Response({'message': 'Ride cancelled'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsRider])
+def arrive_ride(request, ride_id):
+    """
+    Rider marks their confirmed ride as arrived (the driver reached them). The
+    ride stays "on going" on the driver's side (confirmed + arrived both show as
+    On going) until the driver clears it. Notifies the driver.
+    POST /api/rides/<ride_id>/arrive/
+    """
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response({'error': 'Ride not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if ride.rider.user_id != request.user.id:
+        return Response({'error': 'This ride does not belong to you'}, status=status.HTTP_403_FORBIDDEN)
+    if ride.status != 'confirmed':
+        return Response({'error': f'Cannot mark a ride that is {ride.status} as arrived'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    ride.status = 'arrived'
+    ride.save(update_fields=['status'])
+    response_serializer = RideSerializer(ride)
+
+    if ride.driver:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'user_{ride.driver.user_id}',
+            {
+                'type': 'ride_notification',
+                'notification_type': 'ride_arrived',
+                'message': f'{ride.rider.user.full_name} marked you as arrived.',
+                'ride': response_serializer.data,
+            }
+        )
+
+    return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -1177,9 +1224,10 @@ def confirm_ride(request, ride_id):
             'error': 'Not enough balance — recharge to confirm the ride, or cancel.'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Charge the fee now and start the trip.
+    # Charge the fee now, count the ride, and start the trip.
     driver.current_balance -= driver.price_per_trip
-    driver.save(update_fields=['current_balance'])
+    driver.total_rides += 1
+    driver.save(update_fields=['current_balance', 'total_rides'])
     ride.status = 'confirmed'
     ride.save(update_fields=['status'])
 

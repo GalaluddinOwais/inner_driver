@@ -60,7 +60,7 @@ export default function HomeScreen({ navigation }) {
         listOpenRequests(),
         // Include cancelled (not-hidden) so a rider-cancelled confirmed ride still
         // shows with its "Sorry" note until the driver dismisses it with Done.
-        listMyRides(["assigned", "confirmed", "cancelled"]),
+        listMyRides(["assigned", "confirmed", "arrived", "cancelled"]),
       ]);
       setProfile(p);
       setRequests(open);
@@ -87,7 +87,8 @@ export default function HomeScreen({ navigation }) {
             event.type === "offer_countered" ||
             event.type === "offer_accepted" ||
             event.type === "offer_declined" ||
-            event.type === "ride_cancelled_by_rider"
+            event.type === "ride_cancelled_by_rider" ||
+            event.type === "ride_arrived"
           ) {
             loadAll();
           }
@@ -112,7 +113,7 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  const isSharing = activeRides.some((r) => r.status === "confirmed");
+  const isSharing = activeRides.some((r) => r.status === "confirmed" || r.status === "arrived");
 
   // GPS push every 10s during a confirmed ride (fast, no geocode, skip-if-busy so
   // a slow request can never pile up). Shows the button spinner on each push so the
@@ -303,14 +304,51 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.topCard}>
         <View style={[styles.row, { alignItems: "flex-start" }]}>
           <View style={{ alignItems: "flex-start", gap: 8 }}>
-            <View>
-              <Text style={styles.label}>Balance</Text>
-              <Text style={styles.balance}>${profile.current_balance}</Text>
+            {/* Rating + total rides, shown above the balance */}
+            <View style={styles.statsRow}>
+
+
+<View style={styles.statItem}>
+  {/* Wrapper box with a locked height to guarantee baseline alignment */}
+  <View style={{ width: 70, height: 14, position: 'relative' }}>
+    
+    {/* Background: 5 Empty Stars */}
+    <View style={{ flexDirection: 'row', position: 'absolute', top: 0, left: 0 }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <View key={i} style={{ width: 16, alignItems: 'center' }}>
+          <Ionicons name="star-outline" size={16} color="#e2e8f0" />
+        </View>
+      ))}
+    </View>
+
+    {/* Foreground: 5 Gold Stars */}
+    <View 
+      style={{ 
+        flexDirection: 'row', 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        width: `${(Math.min(Math.max(Number(profile.rating || 0), 0), 5) / 5) * 100}%`, 
+        overflow: 'hidden' 
+      }}
+    >
+
+      <View style={{ flexDirection: 'row', width: 70 }}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <View key={i} style={{ width: 16, alignItems: 'center' }}>
+            <Ionicons name="star" size={16} color="#e2e8f0" />
+          </View>
+        ))}
+      </View>
+    </View>
+    
+  </View>
+</View>             
+
+ <View style={styles.statItem}>
+                <Text style={styles.statText}>on {profile.total_rides || 0} rides</Text>
+              </View>
             </View>
-            <TouchableOpacity style={styles.rechargeBtn} onPress={() => setPrompt({ kind: "recharge" })}>
-              <Ionicons name="wallet" size={16} color="#fff" />
-              <Text style={styles.rechargeText}>Recharge</Text>
-            </TouchableOpacity>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <TouchableOpacity onPress={() => navigation.navigate("Settings")} style={styles.gearBtn}>
@@ -320,6 +358,21 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="log-out-outline" size={24} color="#fca5a5" />
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Full-width separator under the stats row + icons */}
+        <View style={styles.divider} />
+
+        {/* Balance + recharge, below the separator */}
+        <View style={[styles.row, { alignItems: "flex-end", marginTop: 14 }]}>
+          <View>
+            <Text style={styles.label}>Balance</Text>
+            <Text style={styles.balance}>${profile.current_balance}</Text>
+          </View>
+          <TouchableOpacity style={styles.rechargeBtn} onPress={() => setPrompt({ kind: "recharge" })}>
+            <Ionicons name="wallet" size={16} color="#fff" />
+            <Text style={styles.rechargeText}>Recharge</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.divider} />
@@ -375,14 +428,16 @@ export default function HomeScreen({ navigation }) {
                 <Text style={[styles.sectionTitle, { marginTop: 0 }]}>Active ride</Text>
                 {activeRides.map((ride) => {
                   const confirmed = ride.status === "confirmed";
+                  const arrived = ride.status === "arrived";
+                  const onGoing = confirmed || arrived; // both shown as "On going"
                   const cancelled = ride.status === "cancelled";
                   const tripKm = haversineKm(
                     { latitude: Number(ride.pickup_latitude), longitude: Number(ride.pickup_longitude) },
                     { latitude: Number(ride.dropoff_latitude), longitude: Number(ride.dropoff_longitude) }
                   );
-                  // assigned = Accepted, confirmed = On going (both green), cancelled = Cancelled (red).
+                  // assigned = Accepted, confirmed/arrived = On going (both green), cancelled = Cancelled (red).
                   const stateColor = cancelled ? STATE_COLORS.cancelled : STATE_COLORS.accepted;
-                  const stateText = cancelled ? "Cancelled" : confirmed ? "On going" : "Accepted";
+                  const stateText = cancelled ? "Cancelled" : onGoing ? "On going" : "Accepted";
                   return (
                     <View key={ride.id} style={styles.reqCard}>
                       {/* Top row: state label (left) + price (right) */}
@@ -393,8 +448,8 @@ export default function HomeScreen({ navigation }) {
                         ) : null}
                       </View>
 
-                      {/* Rider name + phone (side by side); shown on confirmed and cancelled */}
-                      {(confirmed || cancelled) && (ride.rider_name || ride.rider_phone) ? (
+                      {/* Rider name + phone (side by side); shown while on going and on cancelled */}
+                      {(onGoing || cancelled) && (ride.rider_name || ride.rider_phone) ? (
                         <View style={styles.riderRow}>
                           {ride.rider_name ? (
                             <View style={styles.riderItem}>
@@ -440,10 +495,10 @@ export default function HomeScreen({ navigation }) {
                         <Text style={styles.reqMeta}>{tripKm.toFixed(1)} km trip</Text>
                       ) : null}
 
-                      {confirmed || cancelled ? (
+                      {onGoing || cancelled ? (
                         <View style={styles.reqActions}>
                           <TouchableOpacity style={[styles.actBtn, cancelled ? styles.clearBtn : styles.done]} onPress={() => onDone(ride)}>
-                            <Text style={styles.actText}>{cancelled ? "Clear" : "Done, clear"}</Text>
+                            <Text style={styles.actText}>{"Clear"}</Text>
                           </TouchableOpacity>
                         </View>
                       ) : (
@@ -632,7 +687,10 @@ const styles = StyleSheet.create({
   center: { justifyContent: "center", alignItems: "center" },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   topCard: { backgroundColor: "#1e293b", borderRadius: 16, padding: 18, marginBottom: 10 },
-  label: { color: "#94a3b8", fontSize: 13, fontWeight: "600" },
+  label: { color: "#94a3b8", fontSize: 15, fontWeight: "600" },
+  statsRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 6 },
+  statItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  statText: { color: "#e2e8f0", fontSize: 16, fontWeight: "700" },
   availText: { fontSize: 15, fontWeight: "800", marginTop: 2 },
   balance: { color: "#fff", fontSize: 24, fontWeight: "800", marginTop: 2 },
   rechargeBtn: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "#16a34a", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },

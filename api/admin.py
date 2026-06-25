@@ -33,7 +33,9 @@ class DriverAdmin(admin.ModelAdmin):
                     'is_available', 'total_rides', 'rating', 'current_balance']
     list_filter = ['is_available', 'vehicle_type', 'vehicle_color']
     search_fields = ['user__phone_number', 'user__full_name', 'user__email']
-    readonly_fields = ['total_rides', 'rating', 'current_balance']
+    # rating, total_rides and current_balance are editable here for testing/admin
+    # adjustment (normally maintained by the app).
+    readonly_fields = []
 
     def get_full_name(self, obj):
         return obj.user.full_name

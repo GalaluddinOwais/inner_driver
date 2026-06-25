@@ -26,6 +26,7 @@ from .views import (
     decline_offer,
     withdraw_offer,
     cancel_ride,
+    arrive_ride,
     confirm_ride,
     recharge_balance,
     update_driver_location,
@@ -77,6 +78,7 @@ urlpatterns = [
     path('rides/<int:ride_id>/hide/', hide_ride, name='hide_ride'),
     path('rides/<int:ride_id>/rate/', rate_ride, name='rate_ride'),
     path('rides/<int:ride_id>/cancel/', cancel_ride, name='cancel_ride'),
+    path('rides/<int:ride_id>/arrive/', arrive_ride, name='arrive_ride'),
     # Rating prompts (rider rates driver after the driver ends a confirmed ride)
     path('ratings/pending/', list_pending_ratings, name='list_pending_ratings'),
     path('ratings/<int:rating_id>/resolve/', resolve_rating, name='resolve_rating'),

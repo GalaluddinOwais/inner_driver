@@ -214,6 +214,7 @@ class Ride(models.Model):
         ('open', 'Open'),            # awaiting / collecting driver offers
         ('assigned', 'Assigned'),    # rider accepted an offer; awaiting the driver's confirmation (no fee yet)
         ('confirmed', 'Confirmed'),  # driver confirmed they're coming (fee charged, location + phones shared)
+        ('arrived', 'Arrived'),      # rider marked the driver as arrived (trip reached the rider)
         ('cancelled', 'Cancelled'),  # cancelled by rider (open) or driver (assigned)
     ]
 

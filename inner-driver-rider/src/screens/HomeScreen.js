@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getMe, logout, listNearbyDrivers, requestRide, listMyRides,
-  cancelRide, listOffers, counterOffer, acceptOffer, declineOffer,
+  cancelRide, arriveRide, listOffers, counterOffer, acceptOffer, declineOffer,
   rateRide, listPendingRatings, resolveRating,
 } from "../api/rider";
 import { apiError } from "../api/client";
@@ -227,11 +227,14 @@ export default function HomeScreen({ navigation }) {
       {
         text: "Yes, arrived",
         onPress: async () => {
-          // Frontend-only: stop showing this ride and return home. The
-          // dismissedRideId guard keeps it out of subsequent refreshes.
-          dismissedRideId.current = activeRide.id;
+          const rideId = activeRide.id;
+          // Mark the ride as arrived on the backend (status -> 'arrived'), then
+          // stop showing it and return home. The dismissedRideId guard keeps it
+          // out of subsequent refreshes.
+          dismissedRideId.current = rideId;
           setActiveRide(null);
           setOffers([]);
+          try { await arriveRide(rideId); } catch (e) { Alert.alert("Error", apiError(e)); }
           setDrivers(await listNearbyDrivers(riderLoc));
         },
       },

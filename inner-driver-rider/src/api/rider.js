@@ -94,6 +94,12 @@ export async function cancelRide(rideId) {
   return data;
 }
 
+// Rider marks a confirmed ride as arrived (driver reached them). Ride -> 'arrived'.
+export async function arriveRide(rideId) {
+  const { data } = await api.post(`/rides/${rideId}/arrive/`);
+  return data;
+}
+
 // --- Ratings ---
 // Rider rates the driver immediately (e.g. after cancelling a confirmed ride).
 export async function rateRide(rideId, score) {
