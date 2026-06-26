@@ -314,9 +314,15 @@ export default function HomeScreen({ navigation }) {
                       {stateText}
                     </Text>
                   </View>
-  
-                  {/* vehicle (icon + brand·model) and km away, centered under the top row */}
+
+                  {/* rating + vehicle (icon + brand·model) and km away, centered under the top row */}
                   <View style={styles.kmRow}>
+                    {o.driver_rating != null ? (
+                      <View style={styles.offerRating}>
+                        <Ionicons name="star" size={14} color="#e2e8f0" />
+                        <Text style={styles.offerRatingText}>{`${Number(o.driver_rating).toFixed(1)}   `}</Text>
+                      </View>
+                    ) : null}
                     <Ionicons name={o.driver_single_ride_mode ? "car-sport" : "bus"} size={16} color="#e2e8f0" />
                     {vehicleLabel ? <Text style={styles.vehicleLabel}>{vehicleLabel}</Text> : null}
                     {o.driver_distance_km != null ? (
@@ -397,7 +403,7 @@ export default function HomeScreen({ navigation }) {
                 {activeRide.driver_name ? (
                   <View style={styles.driverInfoItem}>
                     <Ionicons name={activeRide.driver_single_ride_mode ? "car-sport" : "bus"} size={15} color="#e2e8f0" />
-                    <Text style={styles.driverInfoName}>{activeRide.driver_name}</Text>
+                    <Text style={[styles.driverInfoName, { flexShrink: 1 }]} numberOfLines={1}>{activeRide.driver_name}</Text>
                   </View>
                 ) : null}
                 {activeRide.driver_phone ? (
@@ -548,11 +554,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#334155",
   },
   priceRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  driverInfoRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 14 },
-  driverInfoItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  driverInfoName: { color: "#e2e8f0", fontSize: 15, fontWeight: "700" },
-  driverInfoPhone: { color: "#e2e8f0", fontSize: 15, fontWeight: "700", textDecorationLine: "underline" },
+  driverInfoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  driverInfoItem: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 0 },
+  driverInfoName: { color: "#e2e8f0", fontSize: 14, fontWeight: "700" },
+  driverInfoPhone: { color: "#e2e8f0", fontSize: 14, fontWeight: "700", textDecorationLine: "underline" },
   offerCard: { backgroundColor: "#0f172a", borderRadius: 12, padding: 14, marginBottom: 10 },
+  offerRating: { flexDirection: "row", alignItems: "center", gap: 3 },
+  offerRatingText: { color: "#e2e8f0", fontSize: 14, fontWeight: "700" },
   offerPrice: { color: "#22c55e", fontSize: 18, fontWeight: "800" },
   priceStrike: { textDecorationLine: "line-through", fontWeight: "800", fontSize: 18 },
   offerMeta: { color: "#94a3b8", fontSize: 13 ,fontWeight: "700"},

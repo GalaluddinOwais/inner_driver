@@ -1133,11 +1133,14 @@ def cancel_ride(request, ride_id):
     ride.save(update_fields=['status'])
     ride.offers.exclude(status='declined').update(status='declined')
 
-    # Undo the ride count: only a 'confirmed' ride was counted (confirm_ride
-    # increments total_rides). 'assigned' was never counted, so leave it.
-    if prev_status == 'confirmed' and ride.driver:
-        ride.driver.total_rides = max(0, ride.driver.total_rides - 1)
-        ride.driver.save(update_fields=['total_rides'])
+    # Undo the ride count for both parties: only a 'confirmed' ride was counted
+    # (confirm_ride increments total_rides). 'assigned' was never counted.
+    if prev_status == 'confirmed':
+        if ride.driver:
+            ride.driver.total_rides = max(0, ride.driver.total_rides - 1)
+            ride.driver.save(update_fields=['total_rides'])
+        ride.rider.total_rides = max(0, ride.rider.total_rides - 1)
+        ride.rider.save(update_fields=['total_rides'])
 
     response_serializer = RideSerializer(ride)
 
@@ -1224,10 +1227,13 @@ def confirm_ride(request, ride_id):
             'error': 'Not enough balance — recharge to confirm the ride, or cancel.'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Charge the fee now, count the ride, and start the trip.
+    # Charge the fee now, count the ride for both parties, and start the trip.
     driver.current_balance -= driver.price_per_trip
     driver.total_rides += 1
     driver.save(update_fields=['current_balance', 'total_rides'])
+    rider = ride.rider
+    rider.total_rides += 1
+    rider.save(update_fields=['total_rides'])
     ride.status = 'confirmed'
     ride.save(update_fields=['status'])
 

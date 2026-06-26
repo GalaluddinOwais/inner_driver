@@ -304,6 +304,11 @@ class RideSerializer(serializers.ModelSerializer):
     # the ride — to keep both anonymous and prevent off-app contact before commitment.
     rider_name = serializers.SerializerMethodField()
     rider_phone = serializers.SerializerMethodField()
+    # Rider's average rating — always shared (regardless of confirm state), but
+    # only once they have enough raters to be meaningful (see MIN_RATERS).
+    rider_rating = serializers.SerializerMethodField()
+    # Driver's average rating — same rule as rider_rating (null until enough raters).
+    driver_rating = serializers.SerializerMethodField()
     driver_name = serializers.SerializerMethodField()
     driver_phone = serializers.SerializerMethodField()
     driver_vehicle = serializers.CharField(source='driver.vehicle_type', read_only=True, default=None)
@@ -318,8 +323,8 @@ class RideSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ride
-        fields = ['id', 'rider', 'driver', 'rider_name', 'rider_phone',
-                  'driver_name', 'driver_phone', 'driver_vehicle', 'driver_vehicle_color',
+        fields = ['id', 'rider', 'driver', 'rider_name', 'rider_phone', 'rider_rating',
+                  'driver_name', 'driver_phone', 'driver_rating', 'driver_vehicle', 'driver_vehicle_color',
                   'driver_single_ride_mode',
                   'driver_latitude', 'driver_longitude', 'driver_location_updated_at',
                   'status', 'status_display', 'final_price',
@@ -333,6 +338,21 @@ class RideSerializer(serializers.ModelSerializer):
     # can still show who it was (and the rating prompt can name them).
     def _contact_visible(self, obj):
         return obj.driver_id is not None and obj.status in ('confirmed', 'arrived', 'cancelled')
+
+    # A rating only shows once it's averaged over at least this many raters.
+    MIN_RATERS = 10
+
+    def get_rider_rating(self, obj):
+        rider = obj.rider
+        if (rider.ratings_count or 0) < self.MIN_RATERS:
+            return None
+        return float(rider.rating)
+
+    def get_driver_rating(self, obj):
+        driver = obj.driver
+        if not driver or (driver.ratings_count or 0) < self.MIN_RATERS:
+            return None
+        return float(driver.rating)
 
     def get_rider_name(self, obj):
         return obj.rider.user.full_name if self._contact_visible(obj) else None
@@ -361,11 +381,18 @@ class OfferSerializer(serializers.ModelSerializer):
     Driver identity (name/phone) is intentionally NOT exposed here — both parties
     stay anonymous until the ride is confirmed (see RideSerializer). Only rating,
     vehicle, and price are shown to help the rider choose."""
-    driver_rating = serializers.DecimalField(source='driver.rating', max_digits=3, decimal_places=2, read_only=True)
+    # Only shown once averaged over enough raters to be meaningful (null otherwise).
+    driver_rating = serializers.SerializerMethodField()
     driver_vehicle = serializers.CharField(source='driver.vehicle_type', read_only=True)
     driver_vehicle_color = serializers.CharField(source='driver.vehicle_color', read_only=True)
     driver_single_ride_mode = serializers.BooleanField(source='driver.single_ride_mode', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    def get_driver_rating(self, obj):
+        driver = obj.driver
+        if not driver or (driver.ratings_count or 0) < 10:
+            return None
+        return float(driver.rating)
 
     class Meta:
         model = Offer

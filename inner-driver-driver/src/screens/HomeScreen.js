@@ -448,13 +448,21 @@ export default function HomeScreen({ navigation }) {
                         ) : null}
                       </View>
 
-                      {/* Rider name + phone (side by side); shown while on going and on cancelled */}
-                      {(onGoing || cancelled) && (ride.rider_name || ride.rider_phone) ? (
+                      {/* Rider rating (always when available) + name + phone (the
+                          latter two only while on going / cancelled). Rating shows
+                          alone otherwise — e.g. on an accepted/assigned ride. */}
+                      {(ride.rider_rating != null || ((onGoing || cancelled) && (ride.rider_name || ride.rider_phone))) ? (
                         <View style={styles.riderRow}>
-                          {ride.rider_name ? (
+                          {ride.rider_rating != null ? (
                             <View style={styles.riderItem}>
+                              <Ionicons name="star" size={14} color="#e2e8f0" />
+                              <Text style={styles.riderName}>{Number(ride.rider_rating).toFixed(1)}</Text>
+                            </View>
+                          ) : null}
+                          {ride.rider_name ? (
+                            <View style={[styles.riderItem, styles.riderNameItem]}>
                               <Ionicons name="person" size={14} color="#e2e8f0" />
-                              <Text style={styles.riderName}>{ride.rider_name}</Text>
+                              <Text style={[styles.riderName, { flexShrink: 1 }]} numberOfLines={1}>{ride.rider_name}</Text>
                             </View>
                           ) : null}
                           {ride.rider_phone ? (
@@ -569,6 +577,16 @@ export default function HomeScreen({ navigation }) {
                       <Text style={[styles.reqPrice, { color: stateColor }]}>${myOffer.price}</Text>
                     </>
                   )}
+                </View>
+              ) : null}
+
+              {/* Rider rating — shown on every request, regardless of offer state. */}
+              {item.rider_rating != null ? (
+                <View style={styles.riderRow}>
+                  <View style={styles.riderItem}>
+                    <Ionicons name="star" size={14} color="#e2e8f0" />
+                    <Text style={styles.riderName}>{Number(item.rider_rating).toFixed(1)}</Text>
+                  </View>
                 </View>
               ) : null}
 
@@ -716,10 +734,12 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   stateLabel: { color: "#94a3b8", fontSize: 18, fontWeight: "800" },
   reqMeta: { color: "#94a3b8", fontSize: 13, marginTop: 8, textAlign: "center" },
-  riderRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 16, marginTop: 6 },
-  riderItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  riderName: { color: "#e2e8f0", fontSize: 15, fontWeight: "700" },
-  reqPhone: { color: "#e2e8f0", fontSize: 15, fontWeight: "700", textDecorationLine: "underline" },
+  riderRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
+  riderItem: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 0 },
+  // The name is the only item allowed to shrink + ellipsize when the line is long.
+  riderNameItem: { flexShrink: 1 },
+  riderName: { color: "#e2e8f0", fontSize: 14, fontWeight: "700" },
+  reqPhone: { color: "#e2e8f0", fontSize: 14, fontWeight: "700", textDecorationLine: "underline" },
   reqPrice: { color: "#22c55e", fontSize: 18, fontWeight: "800" },
   priceStrike: { color: "#22c55e", textDecorationLine: "line-through", fontWeight: "800", fontSize: 18 },
   locChipRow: { flexDirection: "row", gap: 10, marginTop: 8 },
