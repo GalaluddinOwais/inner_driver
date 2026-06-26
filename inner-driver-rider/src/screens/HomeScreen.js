@@ -19,7 +19,7 @@ import LocationModal from "./LocationModal";
 import RatingModal from "./RatingModal";
 
 const DRIVER_LIVE_INTERVAL_MS = 10000; // poll the assigned driver's location every 10s
-const NEARBY_POLL_INTERVAL_MS = 5000; // refresh nearby drivers every 60s on the discovery screen
+const NEARBY_POLL_INTERVAL_MS = 30000; // refresh nearby drivers + pending ratings every 30s on the discovery screen
 
 // Per-state accent color for an offer card's status label + price (mirrors the driver app).
 const STATE_COLORS = {
@@ -117,14 +117,16 @@ export default function HomeScreen({ navigation }) {
     };
   }, [confirmed, refresh]);
 
-  // --- Poll nearby drivers every 60s while on the discovery screen (no active ride) ---
-  // The nearby list is a REST snapshot, not a live feed, so refresh it on a timer
-  // here. Fetch only the drivers (no full refresh) and swallow errors so a transient
-  // network hiccup doesn't alert the user every minute.
+  // --- Poll nearby drivers + pending ratings every 30s while idle (no active ride) ---
+  // Both are REST snapshots, not live feeds, so refresh them on a timer here.
+  // Pending ratings are polled too because, with no active ride, refresh() (which
+  // also fetches them) doesn't run otherwise. Errors are swallowed so a transient
+  // network hiccup doesn't alert the user.
   useEffect(() => {
     if (!activeRide) {
       nearbyTimer.current = setInterval(async () => {
         try { setDrivers(await listNearbyDrivers(riderLoc)); } catch {}
+        try { setPendingRatings(await listPendingRatings()); } catch {}
       }, NEARBY_POLL_INTERVAL_MS);
     }
     return () => {
@@ -189,12 +191,13 @@ export default function HomeScreen({ navigation }) {
           // Snapshot BEFORE cancel/refresh (refresh() clears activeRide).
           const wasConfirmed = activeRide.status === "confirmed";
           const driverName = activeRide.driver_name || null;
+          const origin = activeRide.pickup_location || null;
           const destination = activeRide.dropoff_location || null;
           const rideId = activeRide.id;
           try {
             await cancelRide(rideId);
             // Open the rate-driver prompt first, then refresh in the background.
-            if (wasConfirmed) setCancelRating({ id: rideId, driverName, destination });
+            if (wasConfirmed) setCancelRating({ id: rideId, driverName, origin, destination });
             await refresh();
           }
           catch (e) { Alert.alert("Could not cancel", apiError(e)); }
@@ -483,8 +486,9 @@ export default function HomeScreen({ navigation }) {
       {/* Rate the driver after cancelling a confirmed ride. */}
       <RatingModal
         visible={!!cancelRating}
-        title="Rate your driver"
+        title="Rate your last driver"
         subtitle={cancelRating?.driverName || undefined}
+        origin={cancelRating?.origin || undefined}
         destination={cancelRating?.destination || undefined}
         onSubmit={submitDriverRating}
         onIgnore={() => setCancelRating(null)}
@@ -494,8 +498,9 @@ export default function HomeScreen({ navigation }) {
           hidden while the cancel-rating modal is up to avoid overlap. */}
       <RatingModal
         visible={!cancelRating && pendingRatings.length > 0}
-        title="Rate your driver"
+        title="Rate your last driver"
         subtitle={pendingRatings[0]?.driver_name || undefined}
+        origin={pendingRatings[0]?.origin || undefined}
         destination={pendingRatings[0]?.destination || undefined}
         onSubmit={resolvePendingRating}
         onIgnore={() => resolvePendingRating(null)}

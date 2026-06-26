@@ -692,6 +692,7 @@ export default function HomeScreen({ navigation }) {
         visible={!!ratingRide}
         title="Rate your rider"
         subtitle={ratingRide?.rider_name || undefined}
+        origin={ratingRide?.pickup_location || undefined}
         destination={ratingRide?.dropoff_location || undefined}
         onSubmit={submitRiderRating}
         onIgnore={() => setRatingRide(null)}

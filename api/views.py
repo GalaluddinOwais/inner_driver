@@ -616,6 +616,7 @@ def list_pending_ratings(request):
         'id': rr.id,
         'ride': rr.ride_id,
         'driver_name': rr.driver.user.full_name,
+        'origin': rr.ride.pickup_location or None,
         'destination': rr.ride.dropoff_location or None,
     } for rr in qs]
     return Response(data, status=status.HTTP_200_OK)

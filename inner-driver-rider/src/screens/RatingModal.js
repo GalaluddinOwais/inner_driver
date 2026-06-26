@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 // Usage:
 //   <RatingModal visible title="Rate your rider" subtitle="Ahmed"
 //     onSubmit={(score)=>...} onIgnore={()=>...} />
-export default function RatingModal({ visible, title, subtitle, destination, onSubmit, onIgnore }) {
+export default function RatingModal({ visible, title, subtitle, origin, destination, onSubmit, onIgnore }) {
   const [score, setScore] = useState(0);
 
   useEffect(() => { if (visible) setScore(0); }, [visible]);
@@ -23,12 +23,11 @@ export default function RatingModal({ visible, title, subtitle, destination, onS
 
           <Text style={styles.title}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-          {destination ? (
-            <View style={styles.destRow}>
-              <Ionicons name="location" size={14} color="#64748b" />
-              <Text style={styles.dest} numberOfLines={1}>{destination}</Text>
-            </View>
+          {origin ? <Text style={styles.dest} numberOfLines={1}>{origin}</Text> : null}
+          {origin && destination ? (
+            <Ionicons name="arrow-down" size={16} color="#64748b" style={styles.routeArrow} />
           ) : null}
+          {destination ? <Text style={styles.dest} numberOfLines={1}>{destination}</Text> : null}
 
           <View style={styles.stars}>
             {[1, 2, 3, 4, 5].map((n) => (
@@ -65,9 +64,9 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "#1e293b", borderRadius: 16, padding: 22, paddingTop: 26 },
   close: { position: "absolute", top: 12, right: 12, padding: 4 },
   title: { color: "#fff", fontSize: 19, fontWeight: "800", textAlign: "center" },
-  subtitle: { color: "#94a3b8", fontSize: 14, marginTop: 6, textAlign: "center" },
-  destRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6 },
+  subtitle: { color: "#94a3b8", fontSize: 14, marginTop: 6, marginBottom: 14, textAlign: "center" },
   dest: { color: "#64748b", fontSize: 13, textAlign: "center" },
+  routeArrow: { alignSelf: "center", marginTop: 2 },
   stars: { flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 20, marginBottom: 6 },
   actions: { flexDirection: "row", gap: 10, marginTop: 20 },
   btn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
